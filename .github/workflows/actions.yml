@@ -1,0 +1,10 @@
+name: Run build and tests
+on: [push]
+jobs:
+  Explore-GitHub-Actions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - run: pip install numpy pytest
+      - run: pip install .

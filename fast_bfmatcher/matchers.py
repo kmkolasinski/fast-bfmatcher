@@ -2,7 +2,7 @@ import dataclasses
 from abc import ABC, abstractmethod
 from typing import Tuple
 
-import fast_bfmatcher.matching_ops as mops
+from fast_bfmatcher import matching_ops as mops
 import numpy as np
 
 
@@ -121,7 +121,11 @@ except ImportError:
 
 try:
     import tensorflow as tf
-    # TODO check TF version >= 1.15
+    if tf.__version__ < "2.0.0":
+        msg = f"Required minimum version of Tensorflow is 2.0.0, got: {tf.__version__}"
+        print(msg)
+        raise ImportError(msg)
+
 
     class TFL2BFMatcher(tf.Module, Matcher):
         def __init__(self, name: str = None):
@@ -148,7 +152,7 @@ try:
             row_matches = tf.argmin(dist_mat, 1)
             col_matches = tf.argmin(dist_mat, 0)
 
-            num_rows = tf.shape(row_matches)[0]
+            num_rows = tf.cast(tf.shape(row_matches)[0], dtype=row_matches.dtype)
 
             inverse_row_indices = tf.gather(col_matches, row_matches)
             row_indices = tf.range(0, num_rows, dtype=row_matches.dtype)
