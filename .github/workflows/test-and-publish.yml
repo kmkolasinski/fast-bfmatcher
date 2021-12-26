@@ -36,9 +36,9 @@ jobs:
       # https://github.com/pypa/auditwheel/issues/291
       run: |
         python setup.py sdist bdist_wheel
-        auditwheel repair --plat manylinux_2_27_x86_64 dist/fast_bfmatcher-1.0.0-cp37-cp37-linux_x86_64.whl
+        auditwheel repair --plat manylinux_2_27_x86_64 `ls -1 dist/*-linux*.whl`
         mv wheelhouse/* dist
-        rm dist/*-cp37-cp37-linux_x86_64.whl
+        rm dist/*-linux_x86_64.whl
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
