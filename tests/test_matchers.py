@@ -6,6 +6,8 @@ import fast_bfmatcher.matchers as matchers
 from fast_bfmatcher.matching_ops import l2_distance_matrix
 from fast_bfmatcher.utils import measuretime
 
+np.random.seed(0)
+
 
 def benchmark(name: str, method, steps: int = 50, warmup: int = 5):
     print()
