@@ -1,0 +1,36 @@
+exclude: 'docs|notebooks|rabbitmq|backup|static|node_modules|migrations|.git|.tox'
+default_stages: [commit]
+fail_fast: true
+
+repos:
+-   repo: https://github.com/ambv/black
+    rev: 20.8b1
+    hooks:
+    - id: black
+      language_version: python3.9
+
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v1.4.0
+    hooks:
+    -   id: check-merge-conflict
+    -   id: check-yaml
+    -   id: check-xml
+    -   id: check-added-large-files
+    -   id: detect-private-key
+    -   id: no-commit-to-branch
+        args:
+        - --branch=develop
+        - --branch=master
+        - --branch=fix
+
+-   repo: https://github.com/timothycrosley/isort
+    rev: 5.6.4
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--filter-files"]
+
+-   repo: https://gitlab.com/pycqa/flake8
+    rev: 3.8.4
+    hooks:
+      - id: flake8
+        args: ['--config=setup.cfg']
