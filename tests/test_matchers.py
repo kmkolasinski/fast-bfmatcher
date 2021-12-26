@@ -1,9 +1,12 @@
 import unittest
-from fast_bfmatcher.matchers import *
+
+import numpy as np
+
+import fast_bfmatcher.matchers as matchers
 from fast_bfmatcher.utils import measuretime
 
 
-def benchmark(name: str, method, steps: int = 500, warmup: int = 10):
+def benchmark(name: str, method, steps: int = 200, warmup: int = 10):
     print()
     with measuretime(f"{name} warmup", num_steps=steps):
         for _ in range(warmup):
@@ -94,15 +97,15 @@ class TestMatching(unittest.TestCase):
         X = np.random.randint(0, 255, size=(1000, 128)).astype(np.float32)
         Y = np.random.randint(0, 255, size=(1005, 128)).astype(np.float32)
 
-        fast_matcher = FastBFL2Matcher()
+        fast_matcher = matchers.FastBFL2Matcher()
         result = fast_matcher.match(X, Y)
 
-        cv_matcher = CVBFL2Matcher()
+        cv_matcher = matchers.CVBFL2Matcher()
         cv_result = cv_matcher.match(X, Y)
 
         self.assertEqual(result, cv_result)
 
-        np_matcher = NumpyBFL2Matcher()
+        np_matcher = matchers.NumpyBFL2Matcher()
         np_result = np_matcher.match(X, Y)
 
         self.assertEqual(np_result, cv_result)
@@ -112,7 +115,7 @@ class TestMatching(unittest.TestCase):
         benchmark("numpy", lambda: np_matcher.match(X, Y))
 
         try:
-            tf_matcher = TFL2BFMatcher()
+            tf_matcher = matchers.TFL2BFMatcher()
             tf_result = tf_matcher.match(X, Y)
 
             np.testing.assert_equal(tf_result.indices, cv_result.indices)
@@ -120,5 +123,5 @@ class TestMatching(unittest.TestCase):
             self.assertLess(max_error, 0.001)
 
             benchmark("tensorflow", lambda: tf_matcher.match(X, Y))
-        except:
+        except Exception:
             pass
