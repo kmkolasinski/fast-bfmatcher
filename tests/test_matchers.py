@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 
 import fast_bfmatcher.matchers as matchers
+from fast_bfmatcher.matching_ops import l2_distance_matrix
 from fast_bfmatcher.utils import measuretime
 
 
@@ -21,25 +22,21 @@ class TestMatching(unittest.TestCase):
     def setUp(self) -> None:
         self.X = np.random.randint(0, 128, (512, 256), dtype=np.uint8)
 
-    # def test_run_blas_dot(self):
-    #
-    #     A = np.random.randn(1005, 128).astype(np.float32)
-    #     B = np.random.randn(1000, 128).astype(np.float32)
-    #     C = np.random.randn(1005, 1000).astype(np.float32)
-    #
-    #     l2_distance_matrix(A, B, C)
-    #
-    #     error = np.abs(distance_matrix(A, B) - C).max()
-    #     print(error)
-    #
-    #     blas_call2 = lambda: l2_distance_matrix(A, B, C)
-    #     np_call = lambda : distance_matrix(A, B)
-    #
-    #     print()
-    #     # benchmark("blas1", blas_call)
-    #     benchmark("blas2", blas_call2)
-    #     benchmark("np", np_call)
-    #     print()
+    def test_run_blas_dot(self):
+
+        A = np.random.randn(1005, 128).astype(np.float32)
+        B = np.random.randn(1000, 128).astype(np.float32)
+        C = np.random.randn(1005, 1000).astype(np.float32)
+
+        l2_distance_matrix(A, B, C)
+
+        np_distance = matchers.NumpyBFL2Matcher.distance_matrix(A, B)
+
+        error = np.abs(np_distance - C).max()
+        print(f"L2 numpy / cython MAX error: {error}")
+        benchmark("cython", lambda: l2_distance_matrix(A, B, C))
+        benchmark("numpy", lambda: matchers.NumpyBFL2Matcher.distance_matrix(A, B))
+
     #
     # def test_mean_square_cols(self):
     #

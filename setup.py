@@ -50,6 +50,6 @@ setup(
     packages=["fast_bfmatcher"],
     include_package_data=True,
     zip_safe=False,
-    install_requires=["numpy>=1.21.4"],
+    install_requires=["numpy>=1.19.5"],
     ext_modules=extensions,
 )
