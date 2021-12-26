@@ -1,18 +1,23 @@
-import numpy
-from setuptools import setup, Extension
+from setuptools import Extension, dist, setup
+
 from fast_bfmatcher.version import __version__
 
+dist.Distribution().fetch_build_eggs(["Cython", "numpy"])
 
-USE_CYTHON = True
 try:
+    import numpy
+
     # https://cython.readthedocs.io/en/latest/src/userguide/source_files_and_compilation.html
     from Cython.Build import cythonize
+
+    USE_CYTHON = True
 except ModuleNotFoundError:
     USE_CYTHON = False
 
 
 EXT = ".pyx" if USE_CYTHON else ".c"
 PACKAGE_NAME = "fast_bfmatcher"
+
 
 extensions = [
     Extension(
@@ -31,7 +36,6 @@ extensions = [
 ]
 
 if USE_CYTHON:
-    from Cython.Build import cythonize
     extensions = cythonize(extensions)
 
 
@@ -44,5 +48,8 @@ setup(
     author_email="kmkolasinski@gmail.com",
     license="MIT",
     packages=["fast_bfmatcher"],
+    include_package_data=True,
+    zip_safe=False,
+    install_requires=["numpy"],
     ext_modules=extensions,
 )
