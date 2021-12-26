@@ -35,7 +35,7 @@ jobs:
     - name: Build package
       # https://github.com/pypa/auditwheel/issues/291
       run: |
-        python setup.py sdist bdist_wheel
+        python -m build
         auditwheel repair --plat manylinux_2_27_x86_64 `ls -1 dist/*-linux*.whl`
         mv wheelhouse/* dist
         rm dist/*-linux_x86_64.whl
