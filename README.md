@@ -3,6 +3,14 @@
 ## Installation
 ```bash
  pip install git+https://github.com/kmkolasinski/fast-bfmatcher
+ pip install fast-bfmatcher
+```
+
+## Quick command to check speedup
+
+```python
+from fast_bfmatcher.benchmark import run
+run()
 ```
 
 ## Usage
