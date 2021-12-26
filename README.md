@@ -1,5 +1,12 @@
 # fast-bfmatcher
 
+## Installation
+```bash
+ pip install git+https://github.com/kmkolasinski/fast-bfmatcher
+```
+
+## Usage
+
 Faster replacement for
 
 ```python
