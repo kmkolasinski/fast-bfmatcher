@@ -124,7 +124,7 @@ try:
     import tensorflow as tf
 
     if tf.__version__ < "2.0.0":
-        if tf.__version__ >= "1.15.0":
+        if tf.__version__ >= "1.14.0":
             if not tf.compat.v1.executing_eagerly():
                 msg = "TFL2BFMatcher requires eager mode to be enabled! Call tf.enable_eager_execution() first."
                 print(msg)
