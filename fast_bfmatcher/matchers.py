@@ -2,21 +2,22 @@ import dataclasses
 from abc import ABC, abstractmethod
 from typing import Tuple
 
-from fast_bfmatcher import matching_ops as mops
 import numpy as np
+
+from fast_bfmatcher import matching_ops as mops
 
 
 @dataclasses.dataclass(frozen=True)
 class MatchResult:
     indices: np.ndarray
     """
-    Integer array of shape [num_matches, 2] with (i, j) pair 
+    Integer array of shape [num_matches, 2] with (i, j) pair
     matches indices between X[i, :] and Y[j, :] descriptors
     """
     distances: np.ndarray
     """
-    Float array of shape [num_matches] with computed distances 
-    between matched (i, j) pairs.  
+    Float array of shape [num_matches] with computed distances
+    between matched (i, j) pairs.
     """
 
     def __eq__(self, other: "MatchResult"):
@@ -121,11 +122,17 @@ except ImportError:
 
 try:
     import tensorflow as tf
-    if tf.__version__ < "2.0.0":
-        msg = f"Required minimum version of Tensorflow is 2.0.0, got: {tf.__version__}"
-        print(msg)
-        raise ImportError(msg)
 
+    if tf.__version__ < "2.0.0":
+        if tf.__version__ >= "1.15.0":
+            if not tf.compat.v1.executing_eagerly():
+                msg = "TFL2BFMatcher requires eager mode to be enabled! Call tf.enable_eager_execution() first."
+                print(msg)
+                raise ImportError(msg)
+        else:
+            msg = f"TFL2BFMatcher Requires minimum version of Tensorflow is 2.0.0, got: {tf.__version__}"
+            print(msg)
+            raise ImportError(msg)
 
     class TFL2BFMatcher(tf.Module, Matcher):
         def __init__(self, name: str = None):
