@@ -9,7 +9,7 @@ from fast_bfmatcher.utils import measuretime
 np.random.seed(0)
 
 
-def benchmark(name: str, method, steps: int = 500, warmup: int = 50):
+def benchmark(name: str, method, steps: int = 50, warmup: int = 5):
     print()
     with measuretime(f"{name} warmup", num_steps=steps):
         for _ in range(warmup):
