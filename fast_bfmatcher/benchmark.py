@@ -5,8 +5,8 @@ from fast_bfmatcher.utils import measuretime
 
 
 def benchmark(name: str, method, steps: int = 200, warmup: int = 10):
-    print()
-    with measuretime(f"{name:20} warmup", num_steps=steps):
+
+    with measuretime(f"{name:20} warmup", num_steps=steps, log=False):
         for _ in range(warmup):
             method()
 

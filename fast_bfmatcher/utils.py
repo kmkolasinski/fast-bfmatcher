@@ -4,11 +4,11 @@ from typing import Any, Dict, Optional
 
 class measuretime:
     def __init__(
-            self,
-            name: str,
-            extra: Optional[Dict[str, Any]] = None,
-            log: bool = True,
-            num_steps: int = 1,
+        self,
+        name: str,
+        extra: Optional[Dict[str, Any]] = None,
+        log: bool = True,
+        num_steps: int = 1,
     ):
         self.name = name
         self.extra = extra
@@ -35,7 +35,7 @@ class measuretime:
         self.seconds = time.perf_counter() - self.t
         if self.log:
             print(
-                f"{self.name}: took {self.seconds:5.3f} [s], "
-                f"per step {1000 * self.seconds / self.num_steps:5.3f} [ms]"
+                f"{self.name}: {self.num_steps} steps took {self.seconds:6.3f} [s], "
+                f"per step {1000 * self.seconds / self.num_steps:6.3f} [ms]"
                 f" {self.params}"
             )

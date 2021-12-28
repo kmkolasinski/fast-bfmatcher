@@ -23,6 +23,8 @@ extensions = [
         extra_compile_args=[
             "-Ofast",
             "-march=native",
+            "-msse3",
+            "-finline-functions",
             "-fopt-info-vec-optimized",
         ],
     )
