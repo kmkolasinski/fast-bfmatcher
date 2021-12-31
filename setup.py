@@ -52,6 +52,7 @@ class compile_blis_and_build_ext(build_ext):
         print(f">> Building extension: {ext.name}")
 
         if not BLIS_PATH.exists():
+            Path("build").mkdir(exist_ok=True)
             run_command("git clone https://github.com/flame/blis.git", "build")
         else:
             log.info(f'>> BLIS_PATH="{BLIS_PATH}" exists, skipping download')
