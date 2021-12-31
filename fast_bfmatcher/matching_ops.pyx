@@ -40,7 +40,7 @@ cdef extern from 'cblas.h':
 cdef extern from "fast_ops.h":
     void sum_square_cols(float* X, float *y, int num_rows, int num_cols) nogil
     void sum_row_and_col_vectors(float * row, float *col, float* X, int num_rows, int num_cols) nogil
-    void fast_cross_check_match(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols) nogil
+    void _fast_cross_check_match "fast_cross_check_match"(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols) nogil
 
 
 cdef extern from "blis.h":
@@ -154,7 +154,7 @@ cpdef l2_cross_check_matcher(float[:, ::1] A, float[:, ::1] B):
 
     l2_distance_matrix(A, B, C)
 
-    fast_cross_check_match(
+    _fast_cross_check_match(
         &row_indices[0], &row_values[0], &col_values[0],
         C_ptr, num_rows, num_cols
     )
@@ -168,3 +168,22 @@ cpdef l2_cross_check_matcher(float[:, ::1] A, float[:, ::1] B):
     distances = np.sqrt(np.maximum(0, distances))
     return indices, distances
 
+
+cpdef find_row_col_min_values(float[:, ::1] X):
+
+    cdef:
+        int num_rows = X.shape[0]
+        int num_cols = X.shape[1]
+
+        int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
+        float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
+        float[::1] col_values = np.zeros((num_cols,), dtype=np.float32)
+
+        float *X_ptr = &X[0, 0]
+
+    _fast_cross_check_match(
+        &row_indices[0], &row_values[0], &col_values[0],
+        X_ptr, num_rows, num_cols
+    )
+
+    return row_indices, row_values, col_values

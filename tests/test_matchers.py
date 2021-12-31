@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 import fast_bfmatcher.matchers as matchers
-from fast_bfmatcher.matching_ops import l2_distance_matrix
+from fast_bfmatcher.matching_ops import find_row_col_min_values, l2_distance_matrix
 from fast_bfmatcher.utils import measuretime
 
 np.random.seed(0)
@@ -40,7 +40,7 @@ class TestMatching(unittest.TestCase):
         benchmark("numpy", lambda: A @ B.T)
         benchmark("cython blas", lambda: sgemm_transpose(1, A, B, 0.0, C))
 
-    def test_run_blas_dot(self):
+    def test_compute_distance_matrix(self):
 
         A = np.random.randn(1005, 128).astype(np.float32)
         B = np.random.randn(1000, 128).astype(np.float32)
@@ -54,6 +54,18 @@ class TestMatching(unittest.TestCase):
         print(f"L2 numpy / cython MAX error: {error}")
         benchmark("cython", lambda: l2_distance_matrix(A, B, C))
         benchmark("numpy", lambda: matchers.NumpyBFL2Matcher.distance_matrix(A, B))
+
+    def test_find_row_col_min_values(self):
+        C = np.random.randn(1005, 1000).astype(np.float32)
+
+        row_indices, row_values, col_values = find_row_col_min_values(C)
+        row_indices_np = C.argmin(1)
+        row_values_np = C.min(1)
+        col_values_np = C.min(0)
+
+        print("row_indices error: ", np.abs(row_indices - row_indices_np).max())
+        print("row_values error : ", np.abs(row_values - row_values_np).max())
+        print("col_values error : ", np.abs(col_values - col_values_np).max())
 
     def test_matchers(self):
         X = np.random.randint(0, 255, size=(1000, 128)).astype(np.float32)

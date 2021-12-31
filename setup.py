@@ -107,6 +107,7 @@ extensions = [
             "-Wfatal-errors",
             "-fPIC",
             "-std=c99",
+            "-fopenmp",
             "-D_POSIX_C_SOURCE=200112L",
             "-fopt-info-vec-optimized",
         ],

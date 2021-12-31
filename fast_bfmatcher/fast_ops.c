@@ -124,6 +124,7 @@ void fast_cross_check_match(int *irow, float *vrow, float *vcol, float* X, int n
   float min_value;
   float *row_ptr;
 
+  #pragma omp parallel for private(min_value)
   for (i = 0; i < num_rows; ++i){
        irow[i] = argmin_vector((X + i * num_cols), num_cols, &min_value);
        vrow[i] = min_value;
