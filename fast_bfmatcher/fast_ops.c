@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <blis.h>
 #include "cblas.h"
 
 // porting to mobile information
@@ -160,4 +162,3 @@ void sum_row_and_col_vectors(float* row, float *col, float* X, int num_rows, int
     }
   }
 }
-

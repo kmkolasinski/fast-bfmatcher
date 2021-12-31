@@ -43,6 +43,44 @@ cdef extern from "fast_ops.h":
     void fast_cross_check_match(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols) nogil
 
 
+cdef extern from "blis.h":
+    ctypedef enum trans_t:
+        BLIS_TRANSPOSE
+        BLIS_NO_TRANSPOSE
+
+    void _bli_sgemm "bli_sgemm"(trans_t trans_a, trans_t trans_b,
+                        int m, int n, int k, float* alpha,
+                        float *a, int rsa, int csa,
+                        float *b, int rsb, int csb,
+                        float *beta, float *c, int rsc, int csc) nogil
+
+
+
+cpdef void blis_sgemm_transpose(
+        float alpha,
+        float[:, ::1] A,
+        float[:, ::1] B,
+        float beta,
+        float[:, ::1] C
+):
+
+    """
+    Computes C = α A B^T + β C
+    """
+
+    cdef float* A_ptr = &A[0, 0]
+    cdef float* B_ptr = &B[0, 0]
+    cdef float* C_ptr = &C[0, 0]
+
+    _bli_sgemm(BLIS_NO_TRANSPOSE,BLIS_TRANSPOSE,
+            C.shape[0], C.shape[1], A.shape[1],
+            &alpha,
+            A_ptr, A.shape[1], 1,
+            B_ptr, B.shape[1], 1,
+            &beta,
+            C_ptr, C.shape[1], 1)
+
+
 cpdef void sgemm_transpose(
         float alpha,
         float[:, ::1] A, float[:, ::1] B,
@@ -94,7 +132,7 @@ cpdef void l2_distance_matrix(float[:, ::1] A, float[:, ::1] B, float[:, ::1] C)
         sum_square_cols(A_ptr, a_sq, a_num_rows, a_num_cols)
         sum_square_cols(B_ptr, b_sq, b_num_rows, b_num_cols)
         sum_row_and_col_vectors(a_sq, b_sq, C_ptr, a_num_rows, b_num_rows)
-        sgemm_transpose(-2, A, B, 1, C)
+        blis_sgemm_transpose(-2, A, B, 1, C)
 
     finally:
         free(a_sq)

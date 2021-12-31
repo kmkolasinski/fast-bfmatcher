@@ -1,5 +1,8 @@
 # fast-bfmatcher
 
+Depends on https://github.com/flame/blis which will be downloaded during 
+installation and compiled.
+
 ## Installation
 ```bash
  pip install git+https://github.com/kmkolasinski/fast-bfmatcher
@@ -9,6 +12,9 @@
 ## Quick command to check speedup
 
 ```python
+import os
+os.environ["BLIS_NUM_THREADS"] = "4"
+
 from fast_bfmatcher.benchmark import run
 run()
 ```
