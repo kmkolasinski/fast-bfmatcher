@@ -30,7 +30,7 @@ cdef extern from 'cblas.h':
         CblasLower
 
 
-    void lib_sgemm "cblas_sgemm"(CBLAS_LAYOUT Order, CBLAS_TRANSPOSE TransA,
+    void _blas_sgemm "cblas_sgemm"(CBLAS_LAYOUT Order, CBLAS_TRANSPOSE TransA,
                                  CBLAS_TRANSPOSE TransB, int M, int N, int K,
                                  float  alpha, float  *A, int lda, float  *B, int ldb,
                                  float  beta, float  *C, int ldc) nogil
@@ -81,7 +81,7 @@ cpdef void blis_sgemm_transpose(
             C_ptr, C.shape[1], 1)
 
 
-cpdef void sgemm_transpose(
+cpdef void blas_sgemm_transpose(
         float alpha,
         float[:, ::1] A, float[:, ::1] B,
         float beta,
@@ -96,7 +96,7 @@ cpdef void sgemm_transpose(
     cdef float* B_ptr = &B[0, 0]
     cdef float* C_ptr = &C[0, 0]
 
-    lib_sgemm(CblasRowMajor,CblasNoTrans,CblasTrans,
+    _blas_sgemm(CblasRowMajor,CblasNoTrans,CblasTrans,
             C.shape[0], C.shape[1], A.shape[1],
             alpha,
             A_ptr, A.shape[1],

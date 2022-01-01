@@ -9,11 +9,10 @@ from fast_bfmatcher.utils import measuretime
 np.random.seed(0)
 
 
-def benchmark(name: str, method, steps: int = 500, warmup: int = 5):
-    print()
-    with measuretime(f"{name} warmup", num_steps=steps):
-        for _ in range(warmup):
-            method()
+def benchmark(name: str, method, steps: int = 50, warmup: int = 5):
+
+    for _ in range(warmup):
+        method()
 
     with measuretime(f"{name} calls ", num_steps=steps):
         for _ in range(steps):
@@ -21,12 +20,12 @@ def benchmark(name: str, method, steps: int = 500, warmup: int = 5):
 
 
 class TestMatching(unittest.TestCase):
-    def setUp(self) -> None:
-        self.X = np.random.randint(0, 128, (512, 256), dtype=np.uint8)
-
     def test_blis_sgemm(self):
 
-        from fast_bfmatcher.matching_ops import blis_sgemm_transpose, sgemm_transpose
+        from fast_bfmatcher.matching_ops import (
+            blas_sgemm_transpose,
+            blis_sgemm_transpose,
+        )
 
         A = np.random.randn(1000, 128).astype(np.float32)
         B = np.random.randn(1000, 128).astype(np.float32)
@@ -34,11 +33,11 @@ class TestMatching(unittest.TestCase):
 
         blis_sgemm_transpose(1, A, B, 0.0, C)
 
-        print(np.abs(C - A @ B.T).max())
+        print("Error:", np.abs(C - A @ B.T).max())
 
         benchmark("cython blis", lambda: blis_sgemm_transpose(1, A, B, 0.0, C))
         benchmark("numpy", lambda: A @ B.T)
-        benchmark("cython blas", lambda: sgemm_transpose(1, A, B, 0.0, C))
+        benchmark("cython blas", lambda: blas_sgemm_transpose(1, A, B, 0.0, C))
 
     def test_compute_distance_matrix(self):
 
@@ -48,24 +47,32 @@ class TestMatching(unittest.TestCase):
 
         l2_distance_matrix(A, B, C)
 
-        np_distance = matchers.NumpyBFL2Matcher.distance_matrix(A, B)
+        np_distance = matchers.NumpyBFL2Matcher.l2_distance_matrix(A, B)
 
         error = np.abs(np_distance - C).max()
         print(f"L2 numpy / cython MAX error: {error}")
         benchmark("cython", lambda: l2_distance_matrix(A, B, C))
-        benchmark("numpy", lambda: matchers.NumpyBFL2Matcher.distance_matrix(A, B))
+        benchmark("numpy", lambda: matchers.NumpyBFL2Matcher.l2_distance_matrix(A, B))
 
     def test_find_row_col_min_values(self):
-        C = np.random.randn(1005, 1000).astype(np.float32)
+        C = np.random.randn(2000, 2000).astype(np.float32)
 
         row_indices, row_values, col_values = find_row_col_min_values(C)
-        row_indices_np = C.argmin(1)
-        row_values_np = C.min(1)
-        col_values_np = C.min(0)
+
+        def _find_row_col_min_values_np(x):
+            row_indices_np = x.argmin(1)
+            row_values_np = x.min(1)
+            col_values_np = x.min(0)
+            return row_indices_np, row_values_np, col_values_np
+
+        row_indices_np, row_values_np, col_values_np = _find_row_col_min_values_np(C)
 
         print("row_indices error: ", np.abs(row_indices - row_indices_np).max())
         print("row_values error : ", np.abs(row_values - row_values_np).max())
         print("col_values error : ", np.abs(col_values - col_values_np).max())
+
+        benchmark("cython", lambda: find_row_col_min_values(C))
+        benchmark("numpy", lambda: _find_row_col_min_values_np(C))
 
     def test_matchers(self):
         X = np.random.randint(0, 255, size=(1000, 128)).astype(np.float32)
@@ -99,3 +106,13 @@ class TestMatching(unittest.TestCase):
             benchmark("tensorflow", lambda: tf_matcher.match(X, Y))
         except Exception:
             pass
+
+    def test_benchmark(self):
+
+        # import cv2
+
+        from fast_bfmatcher.benchmark import run
+
+        # cv2.setNumThreads(1)
+        run(1, 1, num_kpts=1000)
+        run(20, 10, num_kpts=1000)

@@ -95,7 +95,6 @@ int argmin_vector(float *x, int n, float* min_value){
     ret_val = k;
     *min_value = smin;
     return ret_val;
-
 }
 
 
@@ -105,6 +104,7 @@ void sum_square_cols(float* X, float *y, int num_rows, int num_cols) {
   float sum;
   float *row_ptr;
 
+  #pragma omp parallel for private(i, j, sum)
   for (i = 0; i < num_rows; ++i)
   {
        row_ptr = (X + i * num_cols);
@@ -124,7 +124,7 @@ void fast_cross_check_match(int *irow, float *vrow, float *vcol, float* X, int n
   float min_value;
   float *row_ptr;
 
-  #pragma omp parallel for private(min_value)
+  #pragma omp parallel for private(i, min_value)
   for (i = 0; i < num_rows; ++i){
        irow[i] = argmin_vector((X + i * num_cols), num_cols, &min_value);
        vrow[i] = min_value;
@@ -152,6 +152,8 @@ void sum_row_and_col_vectors(float* row, float *col, float* X, int num_rows, int
   int i, j;
   float *row_ptr;
   float row_val;
+
+  #pragma omp parallel for private(i, j, row_val, row_ptr)
   for (i = 0; i < num_rows; ++i){
 
     row_ptr = (X + i * num_cols);

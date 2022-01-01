@@ -52,6 +52,12 @@ class Matcher(ABC):
 class FastBFL2Matcher(Matcher):
     """Brute force matcher equivalent to cv2.BFMatcher(NORM_L2, cross_check=True)"""
 
+    @classmethod
+    def l2_distance_matrix(cls, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
+        D = np.zeros([X.shape[0], Y.shape[0]], np.float32)
+        mops.l2_distance_matrix(X, Y, D)
+        return D
+
     def match(self, X: np.ndarray, Y: np.ndarray) -> MatchResult:
         X, Y = self.cast_inputs(X, Y)
         indices, distances = mops.l2_cross_check_matcher(X, Y)
@@ -62,7 +68,7 @@ class NumpyBFL2Matcher(Matcher):
     """Reference numpy implementation"""
 
     @classmethod
-    def distance_matrix(cls, X: np.ndarray, Y: np.ndarray):
+    def l2_distance_matrix(cls, X: np.ndarray, Y: np.ndarray):
         sqnorm1 = np.sum(np.square(X), 1, keepdims=True)
         sqnorm2 = np.sum(np.square(Y), 1, keepdims=True)
         innerprod = np.dot(X, Y.T)
@@ -70,7 +76,7 @@ class NumpyBFL2Matcher(Matcher):
 
     def match(self, X: np.ndarray, Y: np.ndarray) -> MatchResult:
 
-        dist_mat = self.distance_matrix(X, Y)
+        dist_mat = self.l2_distance_matrix(X, Y)
 
         row_matches = np.argmin(dist_mat, 1)
         col_matches = np.argmin(dist_mat, 0)
@@ -134,17 +140,39 @@ try:
             print(msg)
             raise ImportError(msg)
 
+    @tf.function(input_signature=(tf.TensorSpec(shape=[None, None], dtype=tf.float32),))
+    def find_row_col_min_values_tf(X: tf.Tensor):
+        row_indices = tf.argmin(X, 1)
+        row_values = tf.reduce_min(X, 1)
+        col_values = tf.reduce_min(X, 0)
+        return row_indices, row_values, col_values
+
+    @tf.function(
+        input_signature=(
+            tf.TensorSpec(shape=[None, None], dtype=tf.float32),
+            tf.TensorSpec(shape=[None, None], dtype=tf.float32),
+        )
+    )
+    def l2_distance_matrix_tf(X: tf.Tensor, Y: tf.Tensor) -> tf.Tensor:
+        sqnorm1 = tf.reduce_sum(tf.square(X), 1, keepdims=True)
+        sqnorm2 = tf.reduce_sum(tf.square(Y), 1, keepdims=True)
+        innerprod = tf.matmul(X, Y, transpose_a=False, transpose_b=True)
+        return sqnorm1 + tf.transpose(sqnorm2) - 2 * innerprod
+
     class TFL2BFMatcher(tf.Module, Matcher):
         def __init__(self, name: str = None):
             super(TFL2BFMatcher, self).__init__(name=name)
             self.dtype = tf.float32
 
         @classmethod
-        def distance_matrix(cls, X: tf.Tensor, Y: tf.Tensor) -> tf.Tensor:
-            sqnorm1 = tf.reduce_sum(tf.square(X), 1, keepdims=True)
-            sqnorm2 = tf.reduce_sum(tf.square(Y), 1, keepdims=True)
-            innerprod = tf.matmul(X, Y, transpose_a=False, transpose_b=True)
-            return sqnorm1 + tf.transpose(sqnorm2) - 2 * innerprod
+        def l2_distance_matrix(cls, X: np.ndarray, Y: np.ndarray):
+            D = l2_distance_matrix_tf(X, Y)
+            return D.numpy()
+
+        @classmethod
+        def find_row_col_min_values(cls, X: np.ndarray):
+            row_indices, row_values, col_values = find_row_col_min_values_tf(X)
+            return row_indices.numpy(), row_values.numpy(), col_values.numpy()
 
         @tf.function(
             input_signature=(
@@ -154,7 +182,7 @@ try:
         )
         def match_fn(self, X: tf.Tensor, Y: tf.Tensor):
 
-            dist_mat = self.distance_matrix(X, Y)
+            dist_mat = l2_distance_matrix_tf(X, Y)
 
             row_matches = tf.argmin(dist_mat, 1)
             col_matches = tf.argmin(dist_mat, 0)
