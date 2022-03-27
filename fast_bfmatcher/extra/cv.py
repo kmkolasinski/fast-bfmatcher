@@ -25,7 +25,7 @@ class OpenCVL2CCBFMatcher(Matcher):
         return MatchResult(np.array(matches_pairs), np.array(distances))
 
 
-class OpenCVL2LoweBFMatcher(Matcher):
+class OpenCVL2RTBFMatcher(Matcher):
     def __init__(self, ratio: float = 0.7):
         self.ratio = ratio
         self.cv_matcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)

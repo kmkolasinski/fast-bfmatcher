@@ -1,7 +1,7 @@
 import numpy as np
 
 import fast_bfmatcher.matchers as matchers
-from fast_bfmatcher.matching_ops import find_row_col_min_values
+from fast_bfmatcher.matching_ops import find_cross_check_matches
 from fast_bfmatcher.utils import measuretime
 
 
@@ -84,7 +84,7 @@ def benchmark_cc_matchers(
         col_values_np = x.min(0)
         return row_indices_np, row_values_np, col_values_np
 
-    benchmark("fast", lambda: find_row_col_min_values(D), steps=steps, warmup=warmup)
+    benchmark("fast", lambda: find_cross_check_matches(D), steps=steps, warmup=warmup)
     benchmark(
         "numpy", lambda: _find_row_col_min_values_np(D), steps=steps, warmup=warmup
     )

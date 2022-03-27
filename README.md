@@ -11,6 +11,9 @@ installation and compiled.
 
 ## Quick command to check speedup
 
+* CC stands for Cross-Check
+* RT stands for ratio test i.e. Lowe's ratio test proposed in the original SIFT paper
+
 ```python
 import os
 
@@ -49,12 +52,12 @@ Usage:
 
 ```python
 
-from fast_bfmatcher.matchers import FastL2CCBFMatcher, FastL2LoweBFMatcher
+from fast_bfmatcher.matchers import FastL2CCBFMatcher, FastL2RTBFMatcher
 
 fast_matcher = FastL2CCBFMatcher()
 result = fast_matcher.match(X, Y)
 
-fast_matcher = FastL2LoweBFMatcher(ratio  = 0.7)
+fast_matcher = FastL2RTBFMatcher(ratio=0.7)
 result = fast_matcher.match(X, Y)
 
 result.indices, result.distances

@@ -41,7 +41,7 @@ cdef extern from "fast_ops.h":
     void sum_square_cols(float* X, float *y, int num_rows, int num_cols) nogil
     void sum_row_and_col_vectors(float * row, float *col, float* X, int num_rows, int num_cols) nogil
     void _fast_cross_check_match "fast_cross_check_match"(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols) nogil
-    void _fast_find_lowes_match "fast_find_lowes_match"(int *irow, float *vrow, float * X, int num_rows, int num_cols, float ratio)
+    void _fast_ratio_test_match "fast_ratio_test_match"(int *irow, float *vrow, float * X, int num_rows, int num_cols, float ratio)
 
 
 cdef extern from "blis.h":
@@ -170,7 +170,13 @@ cpdef l2_cross_check_matcher(float[:, ::1] A, float[:, ::1] B):
     return indices, distances
 
 
-cpdef find_row_col_min_values(float[:, ::1] X):
+cpdef find_cross_check_matches(float[:, ::1] X):
+    """
+    
+    Args:
+        X: [N, M] float32 distance matrix  
+
+    """
 
     cdef:
         int num_rows = X.shape[0]
@@ -190,7 +196,7 @@ cpdef find_row_col_min_values(float[:, ::1] X):
     return row_indices, row_values, col_values
 
 
-cpdef l2_lowes_test_matcher(float[:, ::1] A, float[:, ::1] B, float ratio):
+cpdef l2_ratio_test_matcher(float[:, ::1] A, float[:, ::1] B, float ratio):
 
     cdef:
         int num_rows = A.shape[0]
@@ -205,7 +211,7 @@ cpdef l2_lowes_test_matcher(float[:, ::1] A, float[:, ::1] B, float ratio):
 
     l2_distance_matrix(A, B, C)
 
-    _fast_find_lowes_match(
+    _fast_ratio_test_match(
         &row_indices[0], &row_values[0],
         C_ptr, num_rows, num_cols, ratio
     )
@@ -222,7 +228,14 @@ cpdef l2_lowes_test_matcher(float[:, ::1] A, float[:, ::1] B, float ratio):
     return indices, distances
 
 
-cpdef find_lowes_test_matches(float[:, ::1] X, float ratio = 0.7):
+cpdef find_ratio_test_matches(float[:, ::1] X, float ratio = 0.7):
+    """
+
+    Args:
+        X: [N, M] float32 distance matrix  
+        ratio: ratio test threshold for the second nearest neighbour
+
+    """
 
     cdef:
         int num_rows = X.shape[0]
@@ -233,7 +246,7 @@ cpdef find_lowes_test_matches(float[:, ::1] X, float ratio = 0.7):
 
         float *X_ptr = &X[0, 0]
 
-    _fast_find_lowes_match(
+    _fast_ratio_test_match(
         &row_indices[0], &row_values[0],
         X_ptr, num_rows, num_cols, ratio
     )

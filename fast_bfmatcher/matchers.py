@@ -64,7 +64,7 @@ class FastL2CCBFMatcher(Matcher):
         return MatchResult(indices, distances)
 
 
-class FastL2LoweBFMatcher(Matcher):
+class FastL2RTBFMatcher(Matcher):
     """
     Brute force matcher equivalent to cv2.BFMatcher(NORM_L2, cross_check=False)
     With Lowe's ratio test
@@ -75,5 +75,5 @@ class FastL2LoweBFMatcher(Matcher):
 
     def match(self, X: np.ndarray, Y: np.ndarray) -> MatchResult:
         X, Y = self.cast_inputs(X, Y)
-        indices, distances = mops.l2_lowes_test_matcher(X, Y, ratio=self.ratio)
+        indices, distances = mops.l2_ratio_test_matcher(X, Y, ratio=self.ratio)
         return MatchResult(indices, distances)

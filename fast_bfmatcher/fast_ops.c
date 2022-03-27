@@ -167,7 +167,7 @@ void sum_row_and_col_vectors(float* row, float *col, float* X, int num_rows, int
 }
 
 
-void fast_find_lowes_match(int *irow, float *vrow, float* X, int num_rows, int num_cols, float ratio) {
+void fast_ratio_test_match(int *irow, float *vrow, float* X, int num_rows, int num_cols, float ratio) {
   // finds two nearest neighbours for Lowe's test
 
   int i, min_index;
@@ -180,7 +180,7 @@ void fast_find_lowes_match(int *irow, float *vrow, float* X, int num_rows, int n
 
        float tmp_value = X[min_index + i * num_cols];
        // some large value,
-       X[min_index + i * num_cols] = 100000.0;
+       X[min_index + i * num_cols] = 1000000.0;
 
        // search for second min value in the row
        argmin_vector((X + i * num_cols), num_cols, &second_min_value);

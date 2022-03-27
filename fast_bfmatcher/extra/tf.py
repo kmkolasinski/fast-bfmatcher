@@ -90,7 +90,7 @@ class TFL2CCBFMatcher(tf.Module, Matcher):
         return MatchResult(indices.numpy(), distances.numpy())
 
 
-class TFL2LoweBFMatcher(TFL2CCBFMatcher):
+class TFL2RTBFMatcher(TFL2CCBFMatcher):
     def __init__(self, ratio: float = 0.7, name: str = None):
         super(TFL2CCBFMatcher, self).__init__(name)
         self.ratio = ratio

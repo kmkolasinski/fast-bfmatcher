@@ -3,11 +3,11 @@ import unittest
 import numpy as np
 
 import fast_bfmatcher.matchers as matchers
-from fast_bfmatcher.extra.cv import OpenCVL2CCBFMatcher, OpenCVL2LoweBFMatcher
+from fast_bfmatcher.extra.cv import OpenCVL2CCBFMatcher, OpenCVL2RTBFMatcher
 from fast_bfmatcher.extra.np import NumpyL2CCBFMatcher
 from fast_bfmatcher.matching_ops import (
-    find_lowes_test_matches,
-    find_row_col_min_values,
+    find_cross_check_matches,
+    find_ratio_test_matches,
     l2_distance_matrix,
 )
 from fast_bfmatcher.utils import measuretime
@@ -63,7 +63,7 @@ class TestMatching(unittest.TestCase):
     def test_find_row_col_min_values(self):
         C = np.random.randn(2000, 2000).astype(np.float32)
 
-        row_indices, row_values, col_values = find_row_col_min_values(C)
+        row_indices, row_values, col_values = find_cross_check_matches(C)
 
         def _find_row_col_min_values_np(x):
             row_indices_np = x.argmin(1)
@@ -77,13 +77,13 @@ class TestMatching(unittest.TestCase):
         print("row_values error : ", np.abs(row_values - row_values_np).max())
         print("col_values error : ", np.abs(col_values - col_values_np).max())
 
-        benchmark("cython", lambda: find_row_col_min_values(C))
+        benchmark("cython", lambda: find_cross_check_matches(C))
         benchmark("numpy", lambda: _find_row_col_min_values_np(C))
 
     def test_find_lowe_matches(self):
         C = np.random.rand(100, 101).astype(np.float32)
         ratio = 0.7
-        row_indices, row_values = find_lowes_test_matches(C, ratio=ratio)
+        row_indices, row_values = find_ratio_test_matches(C, ratio=ratio)
 
         for i in range(20):
             indices = np.argsort(C[i])
@@ -143,8 +143,8 @@ class TestMatching(unittest.TestCase):
         Y[0, :] = X[10, :]
 
         ratio = 0.7
-        fast_matcher = matchers.FastL2LoweBFMatcher(ratio)
-        cv_matcher = OpenCVL2LoweBFMatcher(ratio)
+        fast_matcher = matchers.FastL2RTBFMatcher(ratio)
+        cv_matcher = OpenCVL2RTBFMatcher(ratio)
         fast_result = fast_matcher.match(X, Y)
 
         cv_result = cv_matcher.match(X, Y)
