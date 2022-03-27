@@ -30,7 +30,7 @@ cdef extern from 'cblas.h':
         CblasLower
 
 
-    void lib_sgemm "cblas_sgemm"(CBLAS_LAYOUT Order, CBLAS_TRANSPOSE TransA,
+    void _blas_sgemm "cblas_sgemm"(CBLAS_LAYOUT Order, CBLAS_TRANSPOSE TransA,
                                  CBLAS_TRANSPOSE TransB, int M, int N, int K,
                                  float  alpha, float  *A, int lda, float  *B, int ldb,
                                  float  beta, float  *C, int ldc) nogil
@@ -40,10 +40,49 @@ cdef extern from 'cblas.h':
 cdef extern from "fast_ops.h":
     void sum_square_cols(float* X, float *y, int num_rows, int num_cols) nogil
     void sum_row_and_col_vectors(float * row, float *col, float* X, int num_rows, int num_cols) nogil
-    void fast_cross_check_match(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols) nogil
+    void _fast_cross_check_match "fast_cross_check_match"(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols) nogil
+    void _fast_ratio_test_match "fast_ratio_test_match"(int *irow, float *vrow, float * X, int num_rows, int num_cols, float ratio)
 
 
-cpdef void sgemm_transpose(
+cdef extern from "blis.h":
+    ctypedef enum trans_t:
+        BLIS_TRANSPOSE
+        BLIS_NO_TRANSPOSE
+
+    void _bli_sgemm "bli_sgemm"(trans_t trans_a, trans_t trans_b,
+                        int m, int n, int k, float* alpha,
+                        float *a, int rsa, int csa,
+                        float *b, int rsb, int csb,
+                        float *beta, float *c, int rsc, int csc) nogil
+
+
+
+cpdef void blis_sgemm_transpose(
+        float alpha,
+        float[:, ::1] A,
+        float[:, ::1] B,
+        float beta,
+        float[:, ::1] C
+):
+
+    """
+    Computes C = α A B^T + β C
+    """
+
+    cdef float* A_ptr = &A[0, 0]
+    cdef float* B_ptr = &B[0, 0]
+    cdef float* C_ptr = &C[0, 0]
+
+    _bli_sgemm(BLIS_NO_TRANSPOSE,BLIS_TRANSPOSE,
+            C.shape[0], C.shape[1], A.shape[1],
+            &alpha,
+            A_ptr, A.shape[1], 1,
+            B_ptr, B.shape[1], 1,
+            &beta,
+            C_ptr, C.shape[1], 1)
+
+
+cpdef void blas_sgemm_transpose(
         float alpha,
         float[:, ::1] A, float[:, ::1] B,
         float beta,
@@ -58,7 +97,7 @@ cpdef void sgemm_transpose(
     cdef float* B_ptr = &B[0, 0]
     cdef float* C_ptr = &C[0, 0]
 
-    lib_sgemm(CblasRowMajor,CblasNoTrans,CblasTrans,
+    _blas_sgemm(CblasRowMajor,CblasNoTrans,CblasTrans,
             C.shape[0], C.shape[1], A.shape[1],
             alpha,
             A_ptr, A.shape[1],
@@ -94,7 +133,7 @@ cpdef void l2_distance_matrix(float[:, ::1] A, float[:, ::1] B, float[:, ::1] C)
         sum_square_cols(A_ptr, a_sq, a_num_rows, a_num_cols)
         sum_square_cols(B_ptr, b_sq, b_num_rows, b_num_cols)
         sum_row_and_col_vectors(a_sq, b_sq, C_ptr, a_num_rows, b_num_rows)
-        sgemm_transpose(-2, A, B, 1, C)
+        blis_sgemm_transpose(-2, A, B, 1, C)
 
     finally:
         free(a_sq)
@@ -116,7 +155,7 @@ cpdef l2_cross_check_matcher(float[:, ::1] A, float[:, ::1] B):
 
     l2_distance_matrix(A, B, C)
 
-    fast_cross_check_match(
+    _fast_cross_check_match(
         &row_indices[0], &row_values[0], &col_values[0],
         C_ptr, num_rows, num_cols
     )
@@ -130,3 +169,86 @@ cpdef l2_cross_check_matcher(float[:, ::1] A, float[:, ::1] B):
     distances = np.sqrt(np.maximum(0, distances))
     return indices, distances
 
+
+cpdef find_cross_check_matches(float[:, ::1] X):
+    """
+    
+    Args:
+        X: [N, M] float32 distance matrix  
+
+    """
+
+    cdef:
+        int num_rows = X.shape[0]
+        int num_cols = X.shape[1]
+
+        int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
+        float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
+        float[::1] col_values = np.zeros((num_cols,), dtype=np.float32)
+
+        float *X_ptr = &X[0, 0]
+
+    _fast_cross_check_match(
+        &row_indices[0], &row_values[0], &col_values[0],
+        X_ptr, num_rows, num_cols
+    )
+
+    return row_indices, row_values, col_values
+
+
+cpdef l2_ratio_test_matcher(float[:, ::1] A, float[:, ::1] B, float ratio):
+
+    cdef:
+        int num_rows = A.shape[0]
+        int num_cols = B.shape[0]
+
+        float[:,::1] C = np.zeros((num_rows, num_cols), dtype = np.float32)
+        int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
+        float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
+        float[::1] col_values = np.zeros((num_cols,), dtype=np.float32)
+
+        float *C_ptr = &C[0, 0]
+
+    l2_distance_matrix(A, B, C)
+
+    _fast_ratio_test_match(
+        &row_indices[0], &row_values[0],
+        C_ptr, num_rows, num_cols, ratio
+    )
+
+    row_index = np.arange(0, A.shape[0])
+    valid_matches = np.array(row_indices) != -1
+
+    rows = row_index[valid_matches]
+    cols = np.array(row_indices)[valid_matches]
+
+    distances = np.array(row_values)[valid_matches]
+    indices = np.transpose(np.stack([rows, cols]))
+    distances = np.sqrt(np.maximum(0, distances))
+    return indices, distances
+
+
+cpdef find_ratio_test_matches(float[:, ::1] X, float ratio = 0.7):
+    """
+
+    Args:
+        X: [N, M] float32 distance matrix  
+        ratio: ratio test threshold for the second nearest neighbour
+
+    """
+
+    cdef:
+        int num_rows = X.shape[0]
+        int num_cols = X.shape[1]
+
+        int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
+        float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
+
+        float *X_ptr = &X[0, 0]
+
+    _fast_ratio_test_match(
+        &row_indices[0], &row_values[0],
+        X_ptr, num_rows, num_cols, ratio
+    )
+
+    return row_indices, row_values

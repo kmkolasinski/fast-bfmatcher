@@ -1,8 +1,27 @@
 # fast-bfmatcher
 
+Depends on https://github.com/flame/blis which will be downloaded during 
+installation and compiled.
+
 ## Installation
 ```bash
  pip install git+https://github.com/kmkolasinski/fast-bfmatcher
+ pip install fast-bfmatcher
+```
+
+## Quick command to check speedup
+
+* CC stands for Cross-Check
+* RT stands for ratio test i.e. Lowe's ratio test proposed in the original SIFT paper
+
+```python
+import os
+
+os.environ["BLIS_NUM_THREADS"] = "4"
+
+from fast_bfmatcher.benchmark import benchmark_cc_matchers
+
+benchmark_cc_matchers()
 ```
 
 ## Usage
@@ -33,9 +52,12 @@ Usage:
 
 ```python
 
-from fast_bfmatcher.matchers import FastBFL2Matcher
+from fast_bfmatcher.matchers import FastL2CCBFMatcher, FastL2RTBFMatcher
 
-fast_matcher = FastBFL2Matcher()
+fast_matcher = FastL2CCBFMatcher()
+result = fast_matcher.match(X, Y)
+
+fast_matcher = FastL2RTBFMatcher(ratio=0.7)
 result = fast_matcher.match(X, Y)
 
 result.indices, result.distances
@@ -46,3 +68,19 @@ result.indices, result.distances
 The speed of the matcher depends on the:
 - installed blas library
 - system and CPU 
+
+
+
+# Building 
+
+```bash
+python setup.py build_ext --inplace
+```
+
+# Testing 
+
+```bash
+export BLIS_NUM_THREADS=8;
+export OMP_NUM_THREADS=8
+pytest
+```

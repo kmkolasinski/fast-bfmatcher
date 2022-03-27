@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <blis.h>
 #include "cblas.h"
 
 // porting to mobile information
@@ -93,7 +95,6 @@ int argmin_vector(float *x, int n, float* min_value){
     ret_val = k;
     *min_value = smin;
     return ret_val;
-
 }
 
 
@@ -103,6 +104,7 @@ void sum_square_cols(float* X, float *y, int num_rows, int num_cols) {
   float sum;
   float *row_ptr;
 
+  #pragma omp parallel for private(i, j, sum)
   for (i = 0; i < num_rows; ++i)
   {
        row_ptr = (X + i * num_cols);
@@ -122,6 +124,7 @@ void fast_cross_check_match(int *irow, float *vrow, float *vcol, float* X, int n
   float min_value;
   float *row_ptr;
 
+  #pragma omp parallel for private(i, min_value)
   for (i = 0; i < num_rows; ++i){
        irow[i] = argmin_vector((X + i * num_cols), num_cols, &min_value);
        vrow[i] = min_value;
@@ -149,6 +152,8 @@ void sum_row_and_col_vectors(float* row, float *col, float* X, int num_rows, int
   int i, j;
   float *row_ptr;
   float row_val;
+
+  #pragma omp parallel for private(i, j, row_val, row_ptr)
   for (i = 0; i < num_rows; ++i){
 
     row_ptr = (X + i * num_cols);
@@ -161,3 +166,34 @@ void sum_row_and_col_vectors(float* row, float *col, float* X, int num_rows, int
   }
 }
 
+
+void fast_ratio_test_match(int *irow, float *vrow, float* X, int num_rows, int num_cols, float ratio) {
+  // finds two nearest neighbours for Lowe's test
+
+  int i, min_index;
+  float min_value, second_min_value;
+
+  #pragma omp parallel for private(i, min_value, min_index, second_min_value)
+  for (i = 0; i < num_rows; ++i){
+
+       min_index = argmin_vector((X + i * num_cols), num_cols, &min_value);
+
+       float tmp_value = X[min_index + i * num_cols];
+       // some large value,
+       X[min_index + i * num_cols] = 1000000.0;
+
+       // search for second min value in the row
+       argmin_vector((X + i * num_cols), num_cols, &second_min_value);
+
+       // revert change
+       X[min_index + i * num_cols] = tmp_value;
+
+       if (min_value / second_min_value > ratio){
+            irow[i] = -1;
+            vrow[i] = 0;
+       }else{
+            irow[i] = min_index;
+            vrow[i] = min_value;
+       }
+  }
+}
