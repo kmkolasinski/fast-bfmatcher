@@ -41,6 +41,7 @@ cdef extern from "fast_ops.h":
     void sum_square_cols(float* X, float *y, int num_rows, int num_cols) nogil
     void sum_row_and_col_vectors(float * row, float *col, float* X, int num_rows, int num_cols) nogil
     void _fast_cross_check_match "fast_cross_check_match"(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols) nogil
+    void _fast_find_lowes_match "fast_find_lowes_match"(int *irow, float *vrow, float * X, int num_rows, int num_cols, float ratio)
 
 
 cdef extern from "blis.h":
@@ -187,3 +188,54 @@ cpdef find_row_col_min_values(float[:, ::1] X):
     )
 
     return row_indices, row_values, col_values
+
+
+cpdef l2_lowes_test_matcher(float[:, ::1] A, float[:, ::1] B, float ratio):
+
+    cdef:
+        int num_rows = A.shape[0]
+        int num_cols = B.shape[0]
+
+        float[:,::1] C = np.zeros((num_rows, num_cols), dtype = np.float32)
+        int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
+        float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
+        float[::1] col_values = np.zeros((num_cols,), dtype=np.float32)
+
+        float *C_ptr = &C[0, 0]
+
+    l2_distance_matrix(A, B, C)
+
+    _fast_find_lowes_match(
+        &row_indices[0], &row_values[0],
+        C_ptr, num_rows, num_cols, ratio
+    )
+
+    row_index = np.arange(0, A.shape[0])
+    valid_matches = np.array(row_indices) != -1
+
+    rows = row_index[valid_matches]
+    cols = np.array(row_indices)[valid_matches]
+
+    distances = np.array(row_values)[valid_matches]
+    indices = np.transpose(np.stack([rows, cols]))
+    distances = np.sqrt(np.maximum(0, distances))
+    return indices, distances
+
+
+cpdef find_lowes_test_matches(float[:, ::1] X, float ratio = 0.7):
+
+    cdef:
+        int num_rows = X.shape[0]
+        int num_cols = X.shape[1]
+
+        int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
+        float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
+
+        float *X_ptr = &X[0, 0]
+
+    _fast_find_lowes_match(
+        &row_indices[0], &row_values[0],
+        X_ptr, num_rows, num_cols, ratio
+    )
+
+    return row_indices, row_values

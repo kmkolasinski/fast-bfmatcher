@@ -13,10 +13,12 @@ installation and compiled.
 
 ```python
 import os
+
 os.environ["BLIS_NUM_THREADS"] = "4"
 
-from fast_bfmatcher.benchmark import run
-run()
+from fast_bfmatcher.benchmark import benchmark_cc_matchers
+
+benchmark_cc_matchers()
 ```
 
 ## Usage
@@ -47,9 +49,12 @@ Usage:
 
 ```python
 
-from fast_bfmatcher.matchers import FastBFL2Matcher
+from fast_bfmatcher.matchers import FastL2CCBFMatcher, FastL2LoweBFMatcher
 
-fast_matcher = FastBFL2Matcher()
+fast_matcher = FastL2CCBFMatcher()
+result = fast_matcher.match(X, Y)
+
+fast_matcher = FastL2LoweBFMatcher(ratio  = 0.7)
 result = fast_matcher.match(X, Y)
 
 result.indices, result.distances
@@ -60,3 +65,19 @@ result.indices, result.distances
 The speed of the matcher depends on the:
 - installed blas library
 - system and CPU 
+
+
+
+# Building 
+
+```bash
+python setup.py build_ext --inplace
+```
+
+# Testing 
+
+```bash
+export BLIS_NUM_THREADS=8;
+export OMP_NUM_THREADS=8
+pytest
+```

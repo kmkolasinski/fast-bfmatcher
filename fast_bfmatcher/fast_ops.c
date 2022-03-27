@@ -165,3 +165,35 @@ void sum_row_and_col_vectors(float* row, float *col, float* X, int num_rows, int
     }
   }
 }
+
+
+void fast_find_lowes_match(int *irow, float *vrow, float* X, int num_rows, int num_cols, float ratio) {
+  // finds two nearest neighbours for Lowe's test
+
+  int i, min_index;
+  float min_value, second_min_value;
+
+  #pragma omp parallel for private(i, min_value, min_index, second_min_value)
+  for (i = 0; i < num_rows; ++i){
+
+       min_index = argmin_vector((X + i * num_cols), num_cols, &min_value);
+
+       float tmp_value = X[min_index + i * num_cols];
+       // some large value,
+       X[min_index + i * num_cols] = 100000.0;
+
+       // search for second min value in the row
+       argmin_vector((X + i * num_cols), num_cols, &second_min_value);
+
+       // revert change
+       X[min_index + i * num_cols] = tmp_value;
+
+       if (min_value / second_min_value > ratio){
+            irow[i] = -1;
+            vrow[i] = 0;
+       }else{
+            irow[i] = min_index;
+            vrow[i] = min_value;
+       }
+  }
+}

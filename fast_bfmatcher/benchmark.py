@@ -16,11 +16,15 @@ def benchmark(name: str, method, steps: int = 200, warmup: int = 10):
             method()
 
 
-def run(steps: int = 100, warmup: int = 5, num_kpts: int = 1000, dim: int = 128):
+def benchmark_cc_matchers(
+    steps: int = 100, warmup: int = 5, num_kpts: int = 2000, dim: int = 128
+):
 
     benchmark_tf = True
     try:
-        tf_matcher = matchers.TFL2BFMatcher()
+        from fast_bfmatcher.extra.tf import TFL2CCBFMatcher
+
+        tf_matcher = TFL2CCBFMatcher()
     except Exception as e:
         print(f"Skipping tensorflow benchmark, got error: {e}")
         benchmark_tf = False
@@ -29,9 +33,15 @@ def run(steps: int = 100, warmup: int = 5, num_kpts: int = 1000, dim: int = 128)
     Y = np.random.randint(0, 255, size=(num_kpts, dim)).astype(np.float32)
     D = np.random.randint(0, 255, size=(num_kpts, num_kpts)).astype(np.float32)
 
-    fast_matcher = matchers.FastBFL2Matcher()
-    cv_matcher = matchers.CVBFL2Matcher()
-    np_matcher = matchers.NumpyBFL2Matcher()
+    fast_matcher = matchers.FastL2CCBFMatcher()
+
+    from fast_bfmatcher.extra.cv import OpenCVL2CCBFMatcher
+
+    cv_matcher = OpenCVL2CCBFMatcher()
+
+    from fast_bfmatcher.extra.np import NumpyL2CCBFMatcher
+
+    np_matcher = NumpyL2CCBFMatcher()
 
     print("\n>> Benchmarking matchers ...")
     benchmark("fast", lambda: fast_matcher.match(X, Y), steps=steps, warmup=warmup)
@@ -39,7 +49,6 @@ def run(steps: int = 100, warmup: int = 5, num_kpts: int = 1000, dim: int = 128)
     benchmark("numpy", lambda: np_matcher.match(X, Y), steps=steps, warmup=warmup)
 
     if benchmark_tf:
-        tf_matcher = matchers.TFL2BFMatcher()
         benchmark(
             "tensorflow", lambda: tf_matcher.match(X, Y), steps=steps, warmup=warmup
         )
@@ -48,13 +57,13 @@ def run(steps: int = 100, warmup: int = 5, num_kpts: int = 1000, dim: int = 128)
 
     benchmark(
         "fast",
-        lambda: matchers.FastBFL2Matcher.l2_distance_matrix(X, Y),
+        lambda: matchers.FastL2CCBFMatcher.l2_distance_matrix(X, Y),
         steps=steps,
         warmup=warmup,
     )
     benchmark(
         "numpy",
-        lambda: matchers.NumpyBFL2Matcher.l2_distance_matrix(X, Y),
+        lambda: NumpyL2CCBFMatcher.l2_distance_matrix(X, Y),
         steps=steps,
         warmup=warmup,
     )
@@ -62,7 +71,7 @@ def run(steps: int = 100, warmup: int = 5, num_kpts: int = 1000, dim: int = 128)
     if benchmark_tf:
         benchmark(
             "tensorflow",
-            lambda: matchers.TFL2BFMatcher.l2_distance_matrix(X, Y),
+            lambda: TFL2CCBFMatcher.l2_distance_matrix(X, Y),
             steps=steps,
             warmup=warmup,
         )
@@ -75,7 +84,7 @@ def run(steps: int = 100, warmup: int = 5, num_kpts: int = 1000, dim: int = 128)
         col_values_np = x.min(0)
         return row_indices_np, row_values_np, col_values_np
 
-    benchmark("cython", lambda: find_row_col_min_values(D), steps=steps, warmup=warmup)
+    benchmark("fast", lambda: find_row_col_min_values(D), steps=steps, warmup=warmup)
     benchmark(
         "numpy", lambda: _find_row_col_min_values_np(D), steps=steps, warmup=warmup
     )
@@ -83,7 +92,7 @@ def run(steps: int = 100, warmup: int = 5, num_kpts: int = 1000, dim: int = 128)
     if benchmark_tf:
         benchmark(
             "tensorflow",
-            lambda: matchers.TFL2BFMatcher.find_row_col_min_values(D),
+            lambda: TFL2CCBFMatcher.find_row_col_min_values(D),
             steps=steps,
             warmup=warmup,
         )
