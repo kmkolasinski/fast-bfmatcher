@@ -130,7 +130,6 @@ setup(
     zip_safe=False,
     setup_requires=["cython", "numpy"],
     install_requires=["numpy>=1.16.0"],
-    tests_require=["opencv-python>=4.5.2.54", "opencv-contrib-python>=4.5.2.54"],
     package_data={PACKAGE_NAME: ["matching_ops.pyx", "fast_ops.c", "fast_ops.h"]},
     ext_modules=get_extension_modules(),
     cmdclass={"build_ext": compile_blis_and_build_ext},
