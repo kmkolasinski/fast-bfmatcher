@@ -1,8 +1,11 @@
+import os
 import unittest
+from pathlib import Path
 
+import cv2
 import numpy as np
 
-import fast_bfmatcher.matchers as matchers
+import fast_bfmatcher as matchers
 from fast_bfmatcher.extra.cv import OpenCVL2CCBFMatcher, OpenCVL2RTBFMatcher
 from fast_bfmatcher.extra.np import NumpyL2CCBFMatcher
 from fast_bfmatcher.matching_ops import (
@@ -150,3 +153,27 @@ class TestMatching(unittest.TestCase):
         cv_result = cv_matcher.match(X, Y)
 
         self.assertEqual(fast_result, cv_result)
+
+    def test_matching_real_image(self):
+        path = Path(os.path.dirname(os.path.abspath(__file__))).parent
+        image = cv2.imread(str(path / "data/uber.jpg"))
+        image = cv2.resize(image, (512, 512))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        sift = cv2.SIFT_create()
+
+        _, des1 = sift.detectAndCompute(image, None)
+        _, des2 = sift.detectAndCompute(image[:, ::-1], None)
+
+        fast_matcher_rt = matchers.FastL2RTBFMatcher(ratio=0.7)
+        fast_matcher_cc = matchers.FastL2CCBFMatcher()
+
+        cv_matcher_rt = OpenCVL2RTBFMatcher(0.7)
+        cv_matcher_cc = OpenCVL2CCBFMatcher()
+
+        fs_match = fast_matcher_rt.match(des1, des2)
+        cv_match = cv_matcher_rt.match(des1, des2)
+        self.assertEqual(fs_match, cv_match)
+
+        fs_match = fast_matcher_cc.match(des1, des2)
+        cv_match = cv_matcher_cc.match(des1, des2)
+        self.assertEqual(fs_match, cv_match)

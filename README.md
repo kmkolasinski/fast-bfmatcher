@@ -1,77 +1,78 @@
 # fast-bfmatcher
 
-Depends on https://github.com/flame/blis which will be downloaded during 
-installation and compiled.
+Faster implementation of the OpenCV BFMatcher(cv2.NORM_L2) matcher for image keypoint
+matching
 
-## Installation
-```bash
- pip install git+https://github.com/kmkolasinski/fast-bfmatcher
- pip install fast-bfmatcher
-```
+<img src="data/benchmark.png" width="512">
 
-## Quick command to check speedup
+## Usage
 
 * CC stands for Cross-Check
 * RT stands for ratio test i.e. Lowe's ratio test proposed in the original SIFT paper
 
 ```python
 import os
+# set number of threads
+os.environ["BLIS_NUM_THREADS"] = "4"
+
+import cv2
+from fast_bfmatcher import FastL2RTBFMatcher, FastL2CCBFMatcher
+
+sift = cv2.SIFT_create()
+
+_, des1 = sift.detectAndCompute(image1, None)
+_, des2 = sift.detectAndCompute(image2, None)
+
+fast_matcher_rt = FastL2RTBFMatcher(ratio=0.7)
+fast_matcher_cc = FastL2CCBFMatcher() # cross check matcher
+
+fs_match = fast_matcher_rt.match(des1, des2)
+cv_match = fast_matcher_cc.match(des1, des2)
+
+# match contains indices and distances
+fs_match.indices, fs_match.distances
+
+```
+
+# Installation
+```bash
+ # (recommended) to build BLIS on the host machine 
+ pip install git+https://github.com/kmkolasinski/fast-bfmatcher
+ # to install pip prebuild package
+ pip install fast-bfmatcher
+```
+
+
+# Information
+
+* Speed up is achieved thanks to fast [blis](https://github.com/flame/blis) library
+* Optimized with SIMD instructions custom C implementations
+
+
+# Quick command to check speedup
+
+```python
+import os
 
 os.environ["BLIS_NUM_THREADS"] = "4"
 
+import pandas as pd
+from fast_bfmatcher.benchmark import benchmark_cc_rt_size_scan
 from fast_bfmatcher.benchmark import benchmark_cc_matchers
 
 benchmark_cc_matchers()
+
+# to generate the plot above run this benchmark
+metrics = benchmark_cc_rt_size_scan()
+df = pd.DataFrame(metrics)
+ax = df.set_index("size").plot(lw=2, colormap='jet', marker='.', markersize=10, figsize=(10, 5), fontsize=20)
+ax.set_xlabel("Dim")
+ax.set_ylabel("Time [ms]")
+
 ```
 
-## Usage
 
-Faster replacement for
-
-```python
-import cv2
-import numpy as np
-
-X = np.random.randint(0, 255, size=(1000, 128)).astype(np.float32)
-Y = np.random.randint(0, 255, size=(1005, 128)).astype(np.float32)
-
-bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
-matches = bf.knnMatch(X, Y, k=1)
-
-indices = []
-distances = []
-for match in matches:
-    if len(match) == 1:
-        match = match[0]
-        row, col = match.queryIdx, match.trainIdx
-        indices.append([row, col])
-        distances.append(match.distance)
-```
-
-Usage:
-
-```python
-
-from fast_bfmatcher.matchers import FastL2CCBFMatcher, FastL2RTBFMatcher
-
-fast_matcher = FastL2CCBFMatcher()
-result = fast_matcher.match(X, Y)
-
-fast_matcher = FastL2RTBFMatcher(ratio=0.7)
-result = fast_matcher.match(X, Y)
-
-result.indices, result.distances
-```
-
-# Info
-
-The speed of the matcher depends on the:
-- installed blas library
-- system and CPU 
-
-
-
-# Building 
+# Building library locally
 
 ```bash
 python setup.py build_ext --inplace
@@ -82,5 +83,5 @@ python setup.py build_ext --inplace
 ```bash
 export BLIS_NUM_THREADS=8;
 export OMP_NUM_THREADS=8
-pytest
+pytest -s
 ```
