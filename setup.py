@@ -7,12 +7,11 @@ from typing import Union
 from setuptools import Extension, dist, setup
 from setuptools.command.build_ext import build_ext
 
-from fast_bfmatcher.version import __version__
-
 dist.Distribution().fetch_build_eggs(["cython", "numpy"])
 
 BLIS_PATH = Path("build/blis")
 PACKAGE_NAME = "fast_bfmatcher"
+VERSION = "1.2.0"
 
 
 def run_command(command: str, sources_path: Union[str, Path] = "."):
@@ -119,7 +118,7 @@ def get_extension_modules():
 
 setup(
     name=PACKAGE_NAME,
-    version=__version__,
+    version=VERSION,
     description="Faster implementation of OpenCV BFMatcher matcher",
     url="https://github.com/kmkolasinski/fast-bfmatcher",
     author="Krzysztof Kolasinski",
