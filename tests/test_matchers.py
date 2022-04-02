@@ -1,4 +1,6 @@
+import os
 import unittest
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -153,8 +155,8 @@ class TestMatching(unittest.TestCase):
         self.assertEqual(fast_result, cv_result)
 
     def test_matching_real_image(self):
-
-        image = cv2.imread("../data/uber.jpg")
+        path = Path(os.path.dirname(os.path.abspath(__file__))).parent
+        image = cv2.imread(str(path / "data/uber.jpg"))
         image = cv2.resize(image, (512, 512))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         sift = cv2.SIFT_create()

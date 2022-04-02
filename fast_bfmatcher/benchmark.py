@@ -97,7 +97,7 @@ def benchmark_cc_matchers(
         )
 
 
-def benchmark_cc_rt(
+def benchmark_cc_rt_size_scan(
     max_size: int = 10000, random_sampler_per_size: int = 20
 ) -> Dict[str, List[Any]]:
     """

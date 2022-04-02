@@ -56,9 +56,19 @@ import os
 
 os.environ["BLIS_NUM_THREADS"] = "4"
 
+import pandas as pd
+from fast_bfmatcher.benchmark import benchmark_cc_rt_size_scan
 from fast_bfmatcher.benchmark import benchmark_cc_matchers
 
 benchmark_cc_matchers()
+
+# to generate the plot above run this benchmark
+metrics = benchmark_cc_rt_size_scan()
+df = pd.DataFrame(metrics)
+ax = df.set_index("size").plot(lw=2, colormap='jet', marker='.', markersize=10, figsize=(10, 5), fontsize=20)
+ax.set_xlabel("Dim")
+ax.set_ylabel("Time [ms]")
+
 ```
 
 
