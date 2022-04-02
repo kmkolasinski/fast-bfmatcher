@@ -1,12 +1,11 @@
 from collections import defaultdict
-from plistlib import Dict
-from typing import Any, List
+from typing import Any, Dict, List
 
 import numpy as np
-from fast_bfmatcher.matching_ops import find_cross_check_matches
 
 import fast_bfmatcher.matchers as matchers
-from fast_bfmatcher.extra.cv import OpenCVL2RTBFMatcher, OpenCVL2CCBFMatcher
+from fast_bfmatcher.extra.cv import OpenCVL2CCBFMatcher, OpenCVL2RTBFMatcher
+from fast_bfmatcher.matching_ops import find_cross_check_matches
 from fast_bfmatcher.utils import measuretime
 
 
