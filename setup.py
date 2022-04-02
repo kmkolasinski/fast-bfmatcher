@@ -4,7 +4,7 @@ from distutils.errors import DistutilsSetupError
 from pathlib import Path
 from typing import Union
 
-from setuptools import Extension, dist, find_packages, setup
+from setuptools import Extension, dist, setup
 from setuptools.command.build_ext import build_ext
 
 dist.Distribution().fetch_build_eggs(["cython", "numpy"])
@@ -124,7 +124,7 @@ setup(
     author="Krzysztof Kolasinski",
     author_email="kmkolasinski@gmail.com",
     license="MIT",
-    packages=find_packages(PACKAGE_NAME, exclude=("data", "notebooks", "tests")),
+    packages=["fast_bfmatcher", "fast_bfmatcher.extra"],
     include_package_data=True,
     zip_safe=False,
     setup_requires=["cython", "numpy"],
