@@ -109,7 +109,7 @@ cpdef void blas_sgemm_transpose(
 
 cpdef void l2_distance_matrix(float[:, ::1] A, float[:, ::1] B, float[:, ::1] C):
     """
-    Computes euclidean distance matrix between arrays A and B
+    Computes squared euclidean distance matrix between arrays A and B
         
     Args:
         A: array of shape [N, C] 
@@ -202,18 +202,22 @@ cpdef l2_ratio_test_matcher(float[:, ::1] A, float[:, ::1] B, float ratio):
         int num_rows = A.shape[0]
         int num_cols = B.shape[0]
 
-        float[:,::1] C = np.zeros((num_rows, num_cols), dtype = np.float32)
+        float[:,::1] D = np.zeros((num_rows, num_cols), dtype = np.float32)
         int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
         float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
         float[::1] col_values = np.zeros((num_cols,), dtype=np.float32)
 
-        float *C_ptr = &C[0, 0]
+        # pointer to distance matrix
+        float *D_ptr = &D[0, 0]
+        # use ratio^2 because D is squared distance matrix
+        float squared_ratio = ratio ** 2
 
-    l2_distance_matrix(A, B, C)
+    l2_distance_matrix(A, B, D)
 
     _fast_ratio_test_match(
         &row_indices[0], &row_values[0],
-        C_ptr, num_rows, num_cols, ratio
+        D_ptr, num_rows, num_cols,
+        squared_ratio
     )
 
     row_index = np.arange(0, A.shape[0])

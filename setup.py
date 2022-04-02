@@ -4,7 +4,7 @@ from distutils.errors import DistutilsSetupError
 from pathlib import Path
 from typing import Union
 
-from setuptools import Extension, dist, setup
+from setuptools import Extension, dist, setup, find_packages
 from setuptools.command.build_ext import build_ext
 
 from fast_bfmatcher.version import __version__
@@ -13,15 +13,6 @@ dist.Distribution().fetch_build_eggs(["cython", "numpy"])
 
 BLIS_PATH = Path("build/blis")
 PACKAGE_NAME = "fast_bfmatcher"
-
-
-class BlisLibraryPaths:
-    """Will be set by specialized_build_ext command"""
-
-    include_file: str = ""
-    """Path to the libblis.a library file"""
-    library_dir: str = ""
-    """Path to the blis.h folder"""
 
 
 def run_command(command: str, sources_path: Union[str, Path] = "."):
@@ -43,7 +34,7 @@ def run_command(command: str, sources_path: Union[str, Path] = "."):
     if result.returncode != 0:
         status = stdout or stderr
         raise DistutilsSetupError(
-            f"An ERROR occurred while running the command: {command}.\nStatus: {status}"
+            f"An error occurred while running the command: {command}.\nStatus: {status}"
         )
 
 
@@ -129,12 +120,12 @@ def get_extension_modules():
 setup(
     name=PACKAGE_NAME,
     version=__version__,
-    description="Faster implementation of opencv bruteforce cross check matcher",
+    description="Faster implementation of OpenCV BFMatcher matcher",
     url="https://github.com/kmkolasinski/fast-bfmatcher",
     author="Krzysztof Kolasinski",
     author_email="kmkolasinski@gmail.com",
     license="MIT",
-    packages=[PACKAGE_NAME],
+    packages=find_packages(exclude=["tests", "data", "notebooks"]),
     include_package_data=True,
     zip_safe=False,
     setup_requires=["cython", "numpy"],

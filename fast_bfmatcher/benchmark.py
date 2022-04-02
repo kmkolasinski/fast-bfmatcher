@@ -1,7 +1,12 @@
+from collections import defaultdict
+from plistlib import Dict
+from typing import Any, List
+
 import numpy as np
+from fast_bfmatcher.matching_ops import find_cross_check_matches
 
 import fast_bfmatcher.matchers as matchers
-from fast_bfmatcher.matching_ops import find_cross_check_matches
+from fast_bfmatcher.extra.cv import OpenCVL2RTBFMatcher, OpenCVL2CCBFMatcher
 from fast_bfmatcher.utils import measuretime
 
 
@@ -35,8 +40,6 @@ def benchmark_cc_matchers(
 
     fast_matcher = matchers.FastL2CCBFMatcher()
 
-    from fast_bfmatcher.extra.cv import OpenCVL2CCBFMatcher
-
     cv_matcher = OpenCVL2CCBFMatcher()
 
     from fast_bfmatcher.extra.np import NumpyL2CCBFMatcher
@@ -56,10 +59,7 @@ def benchmark_cc_matchers(
     print("\n>> Benchmarking distance matrix computation ...")
 
     benchmark(
-        "fast",
-        lambda: matchers.FastL2CCBFMatcher.l2_distance_matrix(X, Y),
-        steps=steps,
-        warmup=warmup,
+        "fast", lambda: matchers.l2_distance_matrix(X, Y), steps=steps, warmup=warmup
     )
     benchmark(
         "numpy",
@@ -96,3 +96,54 @@ def benchmark_cc_matchers(
             steps=steps,
             warmup=warmup,
         )
+
+
+def benchmark_cc_rt(
+    max_size: int = 10000, random_sampler_per_size: int = 20
+) -> Dict[str, List[Any]]:
+    """
+    Measures matching time between two random int vectors of size [size, 128] in
+    function of size parameter.
+
+    NOTE: Before run set number of threads
+                os.environ["BLIS_NUM_THREADS"] = "8"
+
+    Args:
+        max_size: maximum size of the tested vector
+        random_sampler_per_size: number of random sampler per each size value
+
+    Returns:
+        metrics: dict with benchmark metrics
+    """
+
+    def _test_match(matcher: matchers.Matcher, name: str) -> Dict[str, List[Any]]:
+
+        metrics = defaultdict(list)
+        for n in range(100, max_size, 500):
+            X = np.random.randint(0, 255, size=(n, 128))
+            Y = np.random.randint(0, 255, size=(n, 128))
+            # warmup
+            for _ in range(5):
+                matcher.match(X, Y)
+
+            with measuretime(f"{name} N={n}") as dt:
+                for _ in range(random_sampler_per_size):
+                    matcher.match(X, Y)
+
+            metrics[name].append(1000 * dt.seconds / random_sampler_per_size)
+            metrics["size"].append(n)
+
+        return metrics
+
+    fast_matcher_rt = matchers.FastL2RTBFMatcher(ratio=0.7)
+    fast_matcher_cc = matchers.FastL2CCBFMatcher()
+
+    cv_matcher_rt = OpenCVL2RTBFMatcher(0.7)
+    cv_matcher_cc = OpenCVL2CCBFMatcher()
+
+    fs_rt_metrics = _test_match(fast_matcher_rt, "fast-rt")
+    fs_cc_metrics = _test_match(fast_matcher_cc, "fast-cc")
+    cv_rt_metrics = _test_match(cv_matcher_rt, "opencv-rt")
+    cv_cc_metrics = _test_match(cv_matcher_cc, "opencv-cc")
+
+    return {**fs_rt_metrics, **fs_cc_metrics, **cv_rt_metrics, **cv_cc_metrics}

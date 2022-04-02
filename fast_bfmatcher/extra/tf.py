@@ -107,7 +107,8 @@ class TFL2RTBFMatcher(TFL2CCBFMatcher):
 
         neg_distances, indices = tf.nn.top_k(-dist_mat, 2)
         distances = -neg_distances
-        is_good = distances[:, 0] < self.ratio * distances[:, 1]
+        ratio2 = self.ratio ** 2
+        is_good = distances[:, 0] < ratio2 * distances[:, 1]
 
         num_rows = tf.shape(dist_mat)[0]
         row_indices = tf.range(0, num_rows, dtype=indices.dtype)
