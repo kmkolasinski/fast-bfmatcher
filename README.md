@@ -12,10 +12,14 @@ matching
 
 ```python
 import os
-# set number of threads
+import cv2
+
+# set number of threads for BLIS, must be set 
+# before import, cannot be change later
 os.environ["BLIS_NUM_THREADS"] = "4"
 
-import cv2
+
+# running benchmarks
 from fast_bfmatcher import FastL2RTBFMatcher, FastL2CCBFMatcher
 
 sift = cv2.SIFT_create()
@@ -53,8 +57,18 @@ fs_match.indices, fs_match.distances
 
 ```python
 import os
+import cv2
 
+# fix number of threads for BLIS, must be set 
+# before using this library, cannot be change
+# later
 os.environ["BLIS_NUM_THREADS"] = "4"
+
+# fix number of threads for numpy
+os.environ["OMP_NUM_THREADS"] = "4"
+
+# fix number of threads for OpenCV
+cv2.setNumThreads(4) 
 
 import pandas as pd
 from fast_bfmatcher.benchmark import benchmark_cc_rt_size_scan
