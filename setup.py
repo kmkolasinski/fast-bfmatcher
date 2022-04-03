@@ -10,6 +10,7 @@ from setuptools.command.build_ext import build_ext
 dist.Distribution().fetch_build_eggs(["cython", "numpy"])
 
 BLIS_PATH = Path("build/blis")
+BLIS_VERSION = "0.9.0"
 PACKAGE_NAME = "fast_bfmatcher"
 VERSION = "1.3.0"
 
@@ -43,7 +44,11 @@ class compile_blis_and_build_ext(build_ext):
 
         if not BLIS_PATH.exists():
             Path("build").mkdir(exist_ok=True)
-            run_command("git clone https://github.com/flame/blis.git", "build")
+            # clone blis at selected version
+            run_command(
+                f"git clone --depth 1 --branch {BLIS_VERSION} https://github.com/flame/blis.git",
+                "build",
+            )
         else:
             log.info(f'>> BLIS_PATH="{BLIS_PATH}" exists, skipping download')
 
