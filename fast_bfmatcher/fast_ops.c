@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <blis.h>
-#include "cblas.h"
 
 // porting to mobile information
 // https://stackoverflow.com/questions/11228855/header-files-for-x86-simd-intrinsics

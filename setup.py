@@ -11,7 +11,7 @@ dist.Distribution().fetch_build_eggs(["cython", "numpy"])
 
 BLIS_PATH = Path("build/blis")
 PACKAGE_NAME = "fast_bfmatcher"
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 
 
 def run_command(command: str, sources_path: Union[str, Path] = "."):

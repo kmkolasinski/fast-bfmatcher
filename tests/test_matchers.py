@@ -31,10 +31,7 @@ def benchmark(name: str, method, steps: int = 50, warmup: int = 5):
 class TestMatching(unittest.TestCase):
     def test_blis_sgemm(self):
 
-        from fast_bfmatcher.matching_ops import (
-            blas_sgemm_transpose,
-            blis_sgemm_transpose,
-        )
+        from fast_bfmatcher.matching_ops import blis_sgemm_transpose
 
         A = np.random.randn(1000, 128).astype(np.float32)
         B = np.random.randn(1000, 128).astype(np.float32)
@@ -46,7 +43,6 @@ class TestMatching(unittest.TestCase):
 
         benchmark("cython blis", lambda: blis_sgemm_transpose(1, A, B, 0.0, C))
         benchmark("numpy", lambda: A @ B.T)
-        benchmark("cython blas", lambda: blas_sgemm_transpose(1, A, B, 0.0, C))
 
     def test_compute_distance_matrix(self):
 
