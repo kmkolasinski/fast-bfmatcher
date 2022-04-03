@@ -11,36 +11,12 @@ ctypedef np.float32_t Float32_t
 ctypedef np.float64_t Float64_t
 ctypedef np.uint8_t Uint8_t
 ctypedef np.int32_t Int32_t
-ctypedef int CBLAS_INDEX
-
-
-cdef extern from 'cblas.h':
-
-    ctypedef enum CBLAS_TRANSPOSE:
-        CblasNoTrans
-        CblasTrans
-        CblasConjTrans
-
-    ctypedef enum CBLAS_LAYOUT:
-        CblasRowMajor
-        CblasColMajor
-
-    ctypedef enum CBLAS_UPLO:
-        CblasUpper
-        CblasLower
-
-
-    void _blas_sgemm "cblas_sgemm"(CBLAS_LAYOUT Order, CBLAS_TRANSPOSE TransA,
-                                 CBLAS_TRANSPOSE TransB, int M, int N, int K,
-                                 float  alpha, float  *A, int lda, float  *B, int ldb,
-                                 float  beta, float  *C, int ldc) nogil
-
 
 
 cdef extern from "fast_ops.h":
-    void sum_square_cols(float* X, float *y, int num_rows, int num_cols) nogil
-    void sum_row_and_col_vectors(float * row, float *col, float* X, int num_rows, int num_cols) nogil
-    void _fast_cross_check_match "fast_cross_check_match"(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols) nogil
+    void sum_square_cols(float* X, float *y, int num_rows, int num_cols)
+    void sum_row_and_col_vectors(float * row, float *col, float* X, int num_rows, int num_cols)
+    void _fast_cross_check_match "fast_cross_check_match"(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols)
     void _fast_ratio_test_match "fast_ratio_test_match"(int *irow, float *vrow, float * X, int num_rows, int num_cols, float ratio)
 
 
@@ -54,7 +30,6 @@ cdef extern from "blis.h":
                         float *a, int rsa, int csa,
                         float *b, int rsb, int csb,
                         float *beta, float *c, int rsc, int csc) nogil
-
 
 
 cpdef void blis_sgemm_transpose(
@@ -80,31 +55,6 @@ cpdef void blis_sgemm_transpose(
             B_ptr, B.shape[1], 1,
             &beta,
             C_ptr, C.shape[1], 1)
-
-
-cpdef void blas_sgemm_transpose(
-        float alpha,
-        float[:, ::1] A, float[:, ::1] B,
-        float beta,
-        float[:, ::1] C
-):
-
-    """
-    Computes C = α A B^T + β C
-    """
-
-    cdef float* A_ptr = &A[0, 0]
-    cdef float* B_ptr = &B[0, 0]
-    cdef float* C_ptr = &C[0, 0]
-
-    _blas_sgemm(CblasRowMajor,CblasNoTrans,CblasTrans,
-            C.shape[0], C.shape[1], A.shape[1],
-            alpha,
-            A_ptr, A.shape[1],
-            B_ptr, B.shape[1],
-            beta,
-            C_ptr, C.shape[1])
-
 
 
 cpdef void l2_distance_matrix(float[:, ::1] A, float[:, ::1] B, float[:, ::1] C):
