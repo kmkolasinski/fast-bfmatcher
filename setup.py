@@ -12,7 +12,7 @@ dist.Distribution().fetch_build_eggs(["cython", "numpy"])
 BLIS_PATH = Path("build/blis")
 BLIS_VERSION = "0.9.0"
 PACKAGE_NAME = "fast_bfmatcher"
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 
 
 def run_command(command: str, sources_path: Union[str, Path] = "."):
@@ -91,7 +91,6 @@ extensions = [
     Extension(
         f"{PACKAGE_NAME}.matching_ops",
         [f"{PACKAGE_NAME}/fast_ops.c", f"{PACKAGE_NAME}/matching_ops.pyx"],
-        libraries=["blas"],
         include_dirs=get_include_dir(),
         extra_compile_args=[
             "-Ofast",
