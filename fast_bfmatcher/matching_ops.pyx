@@ -1,7 +1,5 @@
 import numpy as np
 cimport numpy as np
-
-cimport cython
 from libc.stdlib cimport malloc, free
 
 np.import_array()
@@ -18,6 +16,7 @@ cdef extern from "fast_ops.h":
     void sum_row_and_col_vectors(float * row, float *col, float* X, int num_rows, int num_cols)
     void _fast_cross_check_match "fast_cross_check_match"(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols)
     void _fast_ratio_test_match "fast_ratio_test_match"(int *irow, float *vrow, float * X, int num_rows, int num_cols, float ratio)
+    void _fast_ratio_test_cross_check_match "fast_ratio_test_cross_check_match"(int *irow, float *vrow, float *vcol, float * X, int num_rows, int num_cols, float ratio);
 
 
 cdef extern from "blis.h":
@@ -57,7 +56,11 @@ cpdef void blis_sgemm_transpose(
             C_ptr, C.shape[1], 1)
 
 
-cpdef void l2_distance_matrix(float[:, ::1] A, float[:, ::1] B, float[:, ::1] C):
+cpdef void l2_distance_matrix(
+    float[:, ::1] A,
+    float[:, ::1] B,
+    float[:, ::1] C
+):
     """
     Computes squared euclidean distance matrix between arrays A and B
         
@@ -90,36 +93,6 @@ cpdef void l2_distance_matrix(float[:, ::1] A, float[:, ::1] B, float[:, ::1] C)
         free(b_sq)
 
 
-cpdef l2_cross_check_matcher(float[:, ::1] A, float[:, ::1] B):
-
-    cdef:
-        int num_rows = A.shape[0]
-        int num_cols = B.shape[0]
-
-        float[:,::1] C = np.zeros((num_rows, num_cols), dtype = np.float32)
-        int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
-        float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
-        float[::1] col_values = np.zeros((num_cols,), dtype=np.float32)
-
-        float *C_ptr = &C[0, 0]
-
-    l2_distance_matrix(A, B, C)
-
-    _fast_cross_check_match(
-        &row_indices[0], &row_values[0], &col_values[0],
-        C_ptr, num_rows, num_cols
-    )
-
-    row_index = np.arange(0, A.shape[0])
-    cross_checked = row_values == np.array(col_values)[row_indices]
-    rows = row_index[cross_checked]
-    cols = np.array(row_indices)[cross_checked]
-    distances = np.array(row_values)[cross_checked]
-    indices = np.transpose(np.stack([rows, cols]))
-    distances = np.sqrt(np.maximum(0, distances))
-    return indices, distances
-
-
 cpdef find_cross_check_matches(float[:, ::1] X):
     """
     
@@ -143,43 +116,7 @@ cpdef find_cross_check_matches(float[:, ::1] X):
         X_ptr, num_rows, num_cols
     )
 
-    return row_indices, row_values, col_values
-
-
-cpdef l2_ratio_test_matcher(float[:, ::1] A, float[:, ::1] B, float ratio):
-
-    cdef:
-        int num_rows = A.shape[0]
-        int num_cols = B.shape[0]
-
-        float[:,::1] D = np.zeros((num_rows, num_cols), dtype = np.float32)
-        int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
-        float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
-        float[::1] col_values = np.zeros((num_cols,), dtype=np.float32)
-
-        # pointer to distance matrix
-        float *D_ptr = &D[0, 0]
-        # use ratio^2 because D is squared distance matrix
-        float squared_ratio = ratio ** 2
-
-    l2_distance_matrix(A, B, D)
-
-    _fast_ratio_test_match(
-        &row_indices[0], &row_values[0],
-        D_ptr, num_rows, num_cols,
-        squared_ratio
-    )
-
-    row_index = np.arange(0, A.shape[0])
-    valid_matches = np.array(row_indices) != -1
-
-    rows = row_index[valid_matches]
-    cols = np.array(row_indices)[valid_matches]
-
-    distances = np.array(row_values)[valid_matches]
-    indices = np.transpose(np.stack([rows, cols]))
-    distances = np.sqrt(np.maximum(0, distances))
-    return indices, distances
+    return row_indices, row_values
 
 
 cpdef find_ratio_test_matches(float[:, ::1] X, float ratio = 0.7):
@@ -206,3 +143,63 @@ cpdef find_ratio_test_matches(float[:, ::1] X, float ratio = 0.7):
     )
 
     return row_indices, row_values
+
+
+cpdef find_cross_check_and_ratio_test_matches(float[:, ::1] X, float ratio):
+    """
+
+    Args:
+        X: [N, M] float32 distance matrix  
+        ratio: ratio test value
+
+    """
+
+    cdef:
+        int num_rows = X.shape[0]
+        int num_cols = X.shape[1]
+
+        int[::1] row_indices = np.zeros((num_rows,), dtype = np.int32)
+        float[::1] row_values = np.zeros((num_rows,), dtype=np.float32)
+        float[::1] col_values = np.zeros((num_cols,), dtype=np.float32)
+
+        float *X_ptr = &X[0, 0]
+
+    _fast_ratio_test_cross_check_match(
+        &row_indices[0], &row_values[0], &col_values[0],
+        X_ptr, num_rows, num_cols, ratio
+    )
+
+    return row_indices, row_values
+
+
+cpdef l2_matches(float[:, ::1] A, float[:, ::1] B, str mode, float ratio = 0.0):
+
+    cdef:
+        int num_rows = A.shape[0]
+        int num_cols = B.shape[0]
+
+        float[:,::1] D = np.zeros((num_rows, num_cols), dtype = np.float32)
+        # use ratio^2 because D is squared distance matrix
+        float squared_ratio = ratio ** 2
+
+    l2_distance_matrix(A, B, D)
+
+    if mode == "ratio_test":
+        row_indices, row_values = find_ratio_test_matches(D, squared_ratio)
+    elif mode == "cross_check_test":
+        row_indices, row_values = find_cross_check_matches(D)
+    elif mode == "ratio_and_cross_check_test":
+        row_indices, row_values = find_cross_check_and_ratio_test_matches(D, squared_ratio)
+    else:
+        raise NotImplemented(f"Not implemented match mode: {mode}")
+
+    row_index = np.arange(0, A.shape[0])
+    valid_matches = np.array(row_indices) != -1
+
+    rows = row_index[valid_matches]
+    cols = np.array(row_indices)[valid_matches]
+
+    distances = np.array(row_values)[valid_matches]
+    indices = np.transpose(np.stack([rows, cols]))
+    distances = np.sqrt(np.maximum(0, distances))
+    return indices, distances

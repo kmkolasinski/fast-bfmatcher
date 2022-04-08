@@ -143,6 +143,14 @@ void fast_cross_check_match(int *irow, float *vrow, float *vcol, float* X, int n
     }
   }
 
+  // apply cross check condition
+  #pragma GCC ivdep
+  for (i = 0; i < num_rows; ++i){
+    if (irow[i] > -1 && vrow[i] != vcol[irow[i]]){
+         irow[i] = -1;
+    }
+  }
+
 }
 
 
@@ -167,7 +175,8 @@ void sum_row_and_col_vectors(float* row, float *col, float* X, int num_rows, int
 
 
 void fast_ratio_test_match(int *irow, float *vrow, float* X, int num_rows, int num_cols, float ratio) {
-  // finds two nearest neighbours for Lowe's ratio test
+  // finds two nearest neighbours for Lowe's ratio test, returns -1 if match does not
+  // satisfy the ratio test
 
   int i, min_index;
   float min_value, second_min_value;
@@ -195,4 +204,42 @@ void fast_ratio_test_match(int *irow, float *vrow, float* X, int num_rows, int n
             vrow[i] = min_value;
        }
   }
+}
+
+
+
+void fast_ratio_test_cross_check_match(int *irow, float *vrow, float *vcol, float* X, int num_rows, int num_cols, float ratio) {
+  // combined method which check ratio test and cross check together
+
+  int i, j;
+  float *row_ptr;
+
+  // ratio test step
+  fast_ratio_test_match(irow, vrow, X, num_rows, num_cols, ratio);
+
+  // cross check step
+  #pragma GCC ivdep
+  for (j = 0; j < num_cols; ++j){
+      vcol[j] = X[j];
+  }
+
+  // finding minimum value in each column
+  for (i = 0; i < num_rows; ++i){
+    row_ptr = (X + i * num_cols);
+
+    #pragma GCC ivdep
+    for (j = 0; j < num_cols; ++j){
+        vcol[j] = MIN(row_ptr[j], vcol[j]);
+    }
+  }
+
+  // apply cross check condition
+  #pragma GCC ivdep
+  for (i = 0; i < num_rows; ++i){
+    if (irow[i] > -1 && vrow[i] != vcol[irow[i]]){
+         irow[i] = -1;
+         vrow[i] = 0;
+    }
+  }
+
 }

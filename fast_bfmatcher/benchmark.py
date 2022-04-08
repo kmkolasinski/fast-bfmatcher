@@ -98,18 +98,22 @@ def benchmark_cc_matchers(
 
 
 def benchmark_cc_rt_size_scan(
-    max_size: int = 10000, random_sampler_per_size: int = 20
+    max_size: int = 10000, random_sampler_per_size: int = 20, step: int = 500
 ) -> Dict[str, List[Any]]:
     """
     Measures matching time between two random int vectors of size [size, 128] in
     function of size parameter.
 
     NOTE: Before run set number of threads
-                os.environ["BLIS_NUM_THREADS"] = "8"
+
+            os.environ["BLIS_NUM_THREADS"] = "8"
+            os.environ["OMP_NUM_THREADS"] = "8"
+            cv2.setNumThreads(8)
 
     Args:
         max_size: maximum size of the tested vector
         random_sampler_per_size: number of random sampler per each size value
+        step: scan step size
 
     Returns:
         metrics: dict with benchmark metrics
@@ -118,7 +122,7 @@ def benchmark_cc_rt_size_scan(
     def _test_match(matcher: matchers.Matcher, name: str) -> Dict[str, List[Any]]:
 
         metrics = defaultdict(list)
-        for n in range(100, max_size, 500):
+        for n in range(100, max_size, step):
             X = np.random.randint(0, 255, size=(n, 128))
             Y = np.random.randint(0, 255, size=(n, 128))
             # warmup
@@ -136,13 +140,21 @@ def benchmark_cc_rt_size_scan(
 
     fast_matcher_rt = matchers.FastL2RTBFMatcher(ratio=0.7)
     fast_matcher_cc = matchers.FastL2CCBFMatcher()
+    fast_matcher_rt_cc = matchers.FastL2RTCCBFMatcher(ratio=0.7)
 
     cv_matcher_rt = OpenCVL2RTBFMatcher(0.7)
     cv_matcher_cc = OpenCVL2CCBFMatcher()
 
     fs_rt_metrics = _test_match(fast_matcher_rt, "fast-rt")
     fs_cc_metrics = _test_match(fast_matcher_cc, "fast-cc")
+    fs_rt_cc_metrics = _test_match(fast_matcher_rt_cc, "fast-rt-cc")
     cv_rt_metrics = _test_match(cv_matcher_rt, "opencv-rt")
     cv_cc_metrics = _test_match(cv_matcher_cc, "opencv-cc")
 
-    return {**fs_rt_metrics, **fs_cc_metrics, **cv_rt_metrics, **cv_cc_metrics}
+    return {
+        **fs_rt_metrics,
+        **fs_cc_metrics,
+        **fs_rt_cc_metrics,
+        **cv_rt_metrics,
+        **cv_cc_metrics,
+    }

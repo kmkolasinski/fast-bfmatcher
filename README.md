@@ -20,7 +20,7 @@ os.environ["BLIS_NUM_THREADS"] = "4"
 
 
 # running benchmarks
-from fast_bfmatcher import FastL2RTBFMatcher, FastL2CCBFMatcher
+from fast_bfmatcher import FastL2RTBFMatcher, FastL2CCBFMatcher, FastL2RTCCBFMatcher
 
 sift = cv2.SIFT_create()
 
@@ -29,6 +29,7 @@ _, des2 = sift.detectAndCompute(image2, None)
 
 fast_matcher_rt = FastL2RTBFMatcher(ratio=0.7)
 fast_matcher_cc = FastL2CCBFMatcher() # cross check matcher
+fast_matcher_rt_cc = FastL2RTCCBFMatcher(ratio=0.7) # cross check and ratio test
 
 fs_match = fast_matcher_rt.match(des1, des2)
 cv_match = fast_matcher_cc.match(des1, des2)
