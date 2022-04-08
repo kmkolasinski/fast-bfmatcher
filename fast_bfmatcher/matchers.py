@@ -54,7 +54,7 @@ class FastL2CCBFMatcher(Matcher):
 
     def match(self, X: np.ndarray, Y: np.ndarray) -> MatchResult:
         X, Y = self.cast_inputs(X, Y)
-        indices, distances = mops.l2_cross_check_matcher(X, Y)
+        indices, distances = mops.l2_matches(X, Y, mode="cross_check_test")
         return MatchResult(indices, distances)
 
 
@@ -69,7 +69,22 @@ class FastL2RTBFMatcher(Matcher):
 
     def match(self, X: np.ndarray, Y: np.ndarray) -> MatchResult:
         X, Y = self.cast_inputs(X, Y)
-        indices, distances = mops.l2_ratio_test_matcher(X, Y, ratio=self.ratio)
+        indices, distances = mops.l2_matches(X, Y, ratio=self.ratio, mode="ratio_test")
+        return MatchResult(indices, distances)
+
+
+class FastL2RTCCBFMatcher(FastL2RTBFMatcher):
+    """
+    Combination of FastL2RTBFMatcher and FastL2CCBFMatcher
+     * With Lowe's ratio test
+     * and extra cross check verification
+    """
+
+    def match(self, X: np.ndarray, Y: np.ndarray) -> MatchResult:
+        X, Y = self.cast_inputs(X, Y)
+        indices, distances = mops.l2_matches(
+            X, Y, ratio=self.ratio, mode="ratio_and_cross_check_test"
+        )
         return MatchResult(indices, distances)
 
 

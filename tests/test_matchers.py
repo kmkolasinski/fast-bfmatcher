@@ -6,13 +6,9 @@ import cv2
 import numpy as np
 
 import fast_bfmatcher as matchers
+import fast_bfmatcher.matching_ops as mops
 from fast_bfmatcher.extra.cv import OpenCVL2CCBFMatcher, OpenCVL2RTBFMatcher
 from fast_bfmatcher.extra.np import NumpyL2CCBFMatcher
-from fast_bfmatcher.matching_ops import (
-    find_cross_check_matches,
-    find_ratio_test_matches,
-    l2_distance_matrix,
-)
 from fast_bfmatcher.utils import measuretime
 
 np.random.seed(0)
@@ -31,17 +27,17 @@ def benchmark(name: str, method, steps: int = 50, warmup: int = 5):
 class TestMatching(unittest.TestCase):
     def test_blis_sgemm(self):
 
-        from fast_bfmatcher.matching_ops import blis_sgemm_transpose
-
         A = np.random.randn(1000, 128).astype(np.float32)
         B = np.random.randn(1000, 128).astype(np.float32)
         C = np.random.randn(1000, 1000).astype(np.float32) * 0
 
-        blis_sgemm_transpose(1, A, B, 0.0, C)
+        mops.blis_sgemm_transpose(1, A, B, 0.0, C)
+        error = np.abs(C - A @ B.T).max()
+        error = error / C.max()
+        print("Multiplication error:", error)
+        self.assertLess(error, 1e-6)
 
-        print("Error:", np.abs(C - A @ B.T).max())
-
-        benchmark("cython blis", lambda: blis_sgemm_transpose(1, A, B, 0.0, C))
+        benchmark("blis", lambda: mops.blis_sgemm_transpose(1, A, B, 0.0, C))
         benchmark("numpy", lambda: A @ B.T)
 
     def test_compute_distance_matrix(self):
@@ -50,44 +46,72 @@ class TestMatching(unittest.TestCase):
         B = np.random.randn(1000, 128).astype(np.float32)
         C = np.random.randn(1005, 1000).astype(np.float32)
 
-        l2_distance_matrix(A, B, C)
+        mops.l2_distance_matrix(A, B, C)
 
         np_distance = NumpyL2CCBFMatcher.l2_distance_matrix(A, B)
 
-        error = np.abs(np_distance - C).max()
+        error = np.abs(np_distance - C).max() / np_distance.max()
         print(f"L2 numpy / cython MAX error: {error}")
-        benchmark("cython", lambda: l2_distance_matrix(A, B, C))
+        self.assertLess(error, 1e-6)
+        benchmark("cython", lambda: mops.l2_distance_matrix(A, B, C))
         benchmark("numpy", lambda: NumpyL2CCBFMatcher.l2_distance_matrix(A, B))
 
     def test_find_row_col_min_values(self):
         C = np.random.randn(2000, 2000).astype(np.float32)
 
-        row_indices, row_values, col_values = find_cross_check_matches(C)
+        row_indices, row_values = mops.find_cross_check_matches(C)
 
         def _find_row_col_min_values_np(x):
             row_indices_np = x.argmin(1)
             row_values_np = x.min(1)
-            col_values_np = x.min(0)
-            return row_indices_np, row_values_np, col_values_np
+            return row_indices_np, row_values_np
 
-        row_indices_np, row_values_np, col_values_np = _find_row_col_min_values_np(C)
+        row_indices_np, row_values_np = _find_row_col_min_values_np(C)
+        mask = np.array(row_indices) > -1
 
-        print("row_indices error: ", np.abs(row_indices - row_indices_np).max())
-        print("row_values error : ", np.abs(row_values - row_values_np).max())
-        print("col_values error : ", np.abs(col_values - col_values_np).max())
+        indices_error = np.abs(row_indices - row_indices_np)[mask].max()
+        values_error = np.abs(row_values - row_values_np)[mask].max()
 
-        benchmark("cython", lambda: find_cross_check_matches(C))
+        print("indices error: ", indices_error)
+        print("values error : ", values_error)
+        print("num matches : ", mask.sum())
+
+        self.assertEqual(indices_error, 0)
+        self.assertEqual(values_error, 0)
+
+        benchmark("cython", lambda: mops.find_cross_check_matches(C))
         benchmark("numpy", lambda: _find_row_col_min_values_np(C))
 
-    def test_find_lowe_matches(self):
+    def test_find_ratio_test_matches(self):
         C = np.random.rand(100, 101).astype(np.float32)
         ratio = 0.7
-        row_indices, row_values = find_ratio_test_matches(C, ratio=ratio)
+        row_indices, row_values = mops.find_ratio_test_matches(C, ratio=ratio)
 
-        for i in range(20):
+        for i in range(100):
             indices = np.argsort(C[i])
             d1, d2 = C[i][indices][:2]
             if d1 / d2 > ratio:
+                self.assertEqual(row_indices[i], -1)
+                self.assertEqual(row_values[i], 0)
+            else:
+                self.assertEqual(row_indices[i], indices[0])
+                self.assertEqual(row_values[i], d1)
+
+    def test_find_cross_check_and_ratio_test_matches(self):
+        C = np.random.rand(100, 101).astype(np.float32)
+        ratio = 0.7
+        row_indices, row_values = mops.find_cross_check_and_ratio_test_matches(
+            C, ratio=ratio
+        )
+
+        for i in range(100):
+            indices = np.argsort(C[i])
+            d1, d2 = C[i][indices][:2]
+
+            # column minimum value
+            cross_check_min_d1 = C[:, indices[0]].min()
+
+            if d1 / d2 > ratio or cross_check_min_d1 != d1:
                 self.assertEqual(row_indices[i], -1)
                 self.assertEqual(row_values[i], 0)
             else:
@@ -135,7 +159,7 @@ class TestMatching(unittest.TestCase):
         benchmark_cc_matchers(1, 1, num_kpts=1000)
         benchmark_cc_matchers(20, 10, num_kpts=1000)
 
-    def test_lowes_test_matchers(self):
+    def test_ratio_test_matchers(self):
         X = np.random.randint(0, 255, size=(105, 128)).astype(np.float32)
         Y = np.random.randint(0, 255, size=(100, 128)).astype(np.float32)
 
